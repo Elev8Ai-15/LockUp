@@ -1,0 +1,344 @@
+"use client"
+
+import { useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import {
+  Search,
+  X,
+  AlertTriangle,
+  GitPullRequest,
+  Bot,
+  Send,
+  ChevronDown,
+} from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { vulnerabilities, type Vulnerability, type Severity, type VulnType } from "@/lib/mock-data"
+import { toast } from "sonner"
+
+const severityStyles: Record<Severity, string> = {
+  critical: "bg-destructive/15 text-destructive border-destructive/30",
+  high: "bg-warning/15 text-warning border-warning/30",
+  medium: "bg-primary/15 text-primary border-primary/30",
+  low: "bg-muted text-muted-foreground border-border",
+}
+
+const statusStyles: Record<string, string> = {
+  open: "bg-destructive/15 text-destructive border-destructive/30",
+  fixed: "bg-success/15 text-success border-success/30",
+  ignored: "bg-muted text-muted-foreground border-border",
+}
+
+const mockFixes: Record<string, string> = {
+  "Blockchain": `// AI-Generated Fix using OpenZeppelin ReentrancyGuard
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
+contract Vault is ReentrancyGuard {
+    mapping(address => uint256) public balances;
+
+    function withdraw(uint256 amount) external nonReentrant {
+        require(balances[msg.sender] >= amount, "Insufficient");
+        
+        // Update state BEFORE external call
+        balances[msg.sender] -= amount;
+        
+        (bool success, ) = msg.sender.call{value: amount}("");
+        require(success, "Transfer failed");
+        
+        emit Withdrawn(msg.sender, amount);
+    }
+}`,
+  "SAST": `# AI-Generated Fix - Parameterized Query
+from sqlalchemy import text
+
+def search_items(query: str, db_session):
+    # Use parameterized queries to prevent SQL injection
+    stmt = text("SELECT * FROM items WHERE name LIKE :query")
+    result = db_session.execute(
+        stmt, {"query": f"%{query}%"}
+    )
+    return result.fetchall()`,
+  "SCA": `// AI-Generated Fix - Update vulnerable dependency
+// package.json
+{
+  "dependencies": {
+    "lodash": "^4.17.21"  // Updated from 4.17.15
+  }
+}
+
+// Run: npm audit fix --force`,
+}
+
+export default function ReportsPage() {
+  const [search, setSearch] = useState("")
+  const [severityFilter, setSeverityFilter] = useState<string>("all")
+  const [typeFilter, setTypeFilter] = useState<string>("all")
+  const [selected, setSelected] = useState<Vulnerability | null>(null)
+  const [showAiChat, setShowAiChat] = useState(false)
+  const [chatMessages, setChatMessages] = useState<Array<{ role: string; content: string }>>([])
+
+  const filtered = vulnerabilities.filter((v) => {
+    const matchesSeverity = severityFilter === "all" || v.severity === severityFilter
+    const matchesType = typeFilter === "all" || v.type === typeFilter
+    const matchesSearch =
+      v.title.toLowerCase().includes(search.toLowerCase()) ||
+      v.repo.toLowerCase().includes(search.toLowerCase())
+    return matchesSeverity && matchesType && matchesSearch
+  })
+
+  const openVuln = (vuln: Vulnerability) => {
+    setSelected(vuln)
+    setShowAiChat(false)
+    setChatMessages([])
+  }
+
+  const startAiRemediation = () => {
+    if (!selected) return
+    setShowAiChat(true)
+    const fixCode = mockFixes[selected.type] || mockFixes["SAST"]
+    setChatMessages([
+      {
+        role: "assistant",
+        content: `I've analyzed **${selected.title}** in \`${selected.file}:${selected.line}\`.\n\nHere's a remediation approach:`,
+      },
+      { role: "code", content: fixCode },
+      {
+        role: "assistant",
+        content: "This fix addresses the vulnerability by implementing proper security patterns. Want me to explain further or generate a PR?",
+      },
+    ])
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground tracking-tight">Reports</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          {vulnerabilities.length} vulnerabilities found across all repositories.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search vulnerabilities..."
+            className="pl-9 bg-secondary border-border text-foreground placeholder:text-muted-foreground"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <Select value={severityFilter} onValueChange={setSeverityFilter}>
+          <SelectTrigger className="w-full sm:w-[140px] bg-secondary border-border text-foreground">
+            <SelectValue placeholder="Severity" />
+          </SelectTrigger>
+          <SelectContent className="bg-card border-border text-foreground">
+            <SelectItem value="all">All Severity</SelectItem>
+            <SelectItem value="critical">Critical</SelectItem>
+            <SelectItem value="high">High</SelectItem>
+            <SelectItem value="medium">Medium</SelectItem>
+            <SelectItem value="low">Low</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-full sm:w-[140px] bg-secondary border-border text-foreground">
+            <SelectValue placeholder="Type" />
+          </SelectTrigger>
+          <SelectContent className="bg-card border-border text-foreground">
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="SAST">SAST</SelectItem>
+            <SelectItem value="SCA">SCA</SelectItem>
+            <SelectItem value="Blockchain">Blockchain</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex gap-6">
+        <div className={`flex-1 min-w-0 ${selected ? "hidden lg:block" : ""}`}>
+          <Card className="bg-card border-border">
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-muted-foreground">Vulnerability</TableHead>
+                    <TableHead className="text-muted-foreground">Severity</TableHead>
+                    <TableHead className="text-muted-foreground hidden md:table-cell">Type</TableHead>
+                    <TableHead className="text-muted-foreground hidden md:table-cell">CVSS</TableHead>
+                    <TableHead className="text-muted-foreground hidden sm:table-cell">Repo</TableHead>
+                    <TableHead className="text-muted-foreground">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((vuln) => (
+                    <TableRow
+                      key={vuln.id}
+                      className="border-border hover:bg-secondary/50 cursor-pointer"
+                      onClick={() => openVuln(vuln)}
+                    >
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className={`h-3.5 w-3.5 shrink-0 ${
+                            vuln.severity === "critical" ? "text-destructive" :
+                            vuln.severity === "high" ? "text-warning" :
+                            "text-muted-foreground"
+                          }`} />
+                          <span className="text-sm text-foreground truncate max-w-[200px]">{vuln.title}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={`text-[10px] uppercase ${severityStyles[vuln.severity]}`}>
+                          {vuln.severity}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <span className="text-xs text-muted-foreground">{vuln.type}</span>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <span className={`text-sm font-mono ${
+                          vuln.cvss >= 9 ? "text-destructive" :
+                          vuln.cvss >= 7 ? "text-warning" :
+                          "text-muted-foreground"
+                        }`}>
+                          {vuln.cvss}
+                        </span>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <span className="text-xs font-mono text-muted-foreground">{vuln.repo}</span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={`text-[10px] ${statusStyles[vuln.status]}`}>
+                          {vuln.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+
+        <AnimatePresence>
+          {selected && (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              className="w-full lg:w-[420px] shrink-0"
+            >
+              <Card className="bg-card border-border sticky top-20">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-foreground text-base">{selected.title}</CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                      onClick={() => setSelected(null)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="outline" className={`text-[10px] uppercase ${severityStyles[selected.severity]}`}>
+                      {selected.severity}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">{selected.id}</span>
+                    <span className="text-xs font-mono text-muted-foreground">CVSS {selected.cvss}</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Location</p>
+                    <p className="text-sm font-mono text-foreground">{selected.file}:{selected.line}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{selected.repo}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Description</p>
+                    <p className="text-sm text-secondary-foreground leading-relaxed">{selected.description}</p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="flex-1 gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
+                      onClick={startAiRemediation}
+                    >
+                      <Bot className="h-3.5 w-3.5" />
+                      AI Remediation
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 gap-1.5 border-border text-foreground hover:bg-secondary"
+                      onClick={() => toast.success("Pull request created!", { description: `Fix for ${selected.title}` })}
+                    >
+                      <GitPullRequest className="h-3.5 w-3.5" />
+                      Create PR
+                    </Button>
+                  </div>
+
+                  {showAiChat && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      className="border border-border rounded-lg overflow-hidden"
+                    >
+                      <div className="bg-[#070B16] px-3 py-2 border-b border-border flex items-center gap-2">
+                        <Bot className="h-3.5 w-3.5 text-primary" />
+                        <span className="text-xs text-foreground font-medium">AI Security Assistant</span>
+                      </div>
+                      <ScrollArea className="h-[260px] p-3">
+                        <div className="flex flex-col gap-3">
+                          {chatMessages.map((msg, idx) => (
+                            <div key={idx}>
+                              {msg.role === "code" ? (
+                                <pre className="bg-[#070B16] border border-border rounded-md p-3 text-xs font-mono text-foreground overflow-x-auto whitespace-pre-wrap">
+                                  {msg.content}
+                                </pre>
+                              ) : (
+                                <p className="text-sm text-secondary-foreground leading-relaxed">{msg.content}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                      <div className="border-t border-border p-2 flex gap-2">
+                        <Input
+                          placeholder="Ask about this vulnerability..."
+                          className="bg-secondary border-border text-foreground text-xs placeholder:text-muted-foreground h-8"
+                        />
+                        <Button size="icon" className="h-8 w-8 bg-primary text-primary-foreground hover:bg-primary/90 shrink-0">
+                          <Send className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </motion.div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  )
+}
