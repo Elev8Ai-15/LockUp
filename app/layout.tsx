@@ -1,3 +1,4 @@
+/* Next steps: Connect to Temporal backend for real agents + DAST integration */
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
@@ -8,30 +9,13 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: 'AppScan.dev - Security Scanner for AI & Blockchain Apps',
-  description: 'The ultimate dev-first security scanner for AI-coded apps and blockchain smart contracts. Powered by 18 OSS tools + AI.',
+  title: 'AppScan.dev - Agentic AI Security for Vibe-Coded Apps',
+  description: 'The agentic AI security platform for vibe-coded apps, websites, web/mobile apps, and blockchain smart contracts. Powered by 28 OSS tools + 4 Agentic LLMs.',
   generator: 'AppScan.dev',
-  icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
-  },
 }
 
 export const viewport: Viewport = {
-  themeColor: '#0A0F1E',
+  themeColor: '#0F1A14',
   userScalable: true,
 }
 
@@ -42,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className="font-sans antialiased bg-[#0A0F1E]">
+      <body className="font-sans antialiased bg-[#0F1A14]">
         <DashboardLayout>
           {children}
         </DashboardLayout>

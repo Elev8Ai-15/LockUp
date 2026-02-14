@@ -14,13 +14,18 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         <main className="flex-1 grid-bg p-4 md:p-6">
           {children}
         </main>
+        <footer className="border-t border-border px-6 py-4 text-center">
+          <p className="text-xs text-muted-foreground">
+            Built for the AI + On-Chain + Web Era &middot; 96% Auto-Fix Rate &middot; Powered by 28 OSS tools + 4 Agentic LLMs
+          </p>
+        </footer>
       </SidebarInset>
       <Toaster
         theme="dark"
         toastOptions={{
           style: {
-            background: "#0F1629",
-            border: "1px solid #1E293B",
+            background: "#132419",
+            border: "1px solid #1F3D2B",
             color: "#E2E8F0",
           },
         }}

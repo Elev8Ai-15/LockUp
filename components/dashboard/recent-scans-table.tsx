@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { recentScans, type ScanStatus } from "@/lib/mock-data"
+import { recentScans, type ScanStatus, type AssetType } from "@/lib/mock-data"
 import { toast } from "sonner"
 
 function StatusBadge({ status }: { status: ScanStatus }) {
@@ -23,7 +23,6 @@ function StatusBadge({ status }: { status: ScanStatus }) {
     failed: "bg-destructive/15 text-destructive border-destructive/30",
     queued: "bg-warning/15 text-warning border-warning/30",
   }
-
   return (
     <Badge variant="outline" className={styles[status]}>
       {status === "running" && <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />}
@@ -32,11 +31,18 @@ function StatusBadge({ status }: { status: ScanStatus }) {
   )
 }
 
+const typeColors: Record<AssetType, string> = {
+  Repo: "border-primary/30 text-primary",
+  Website: "border-success/30 text-success",
+  WebApp: "border-primary/30 text-primary",
+  SmartContract: "border-accent/30 text-accent",
+}
+
 export function RecentScansTable() {
   return (
     <Card className="bg-card border-border">
       <CardHeader className="flex flex-row items-center justify-between pb-3">
-        <CardTitle className="text-foreground text-base">Recent Scans</CardTitle>
+        <CardTitle className="text-foreground text-base">Recent Activity</CardTitle>
         <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
           View All
         </Button>
@@ -45,7 +51,8 @@ export function RecentScansTable() {
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
-              <TableHead className="text-muted-foreground">Repository</TableHead>
+              <TableHead className="text-muted-foreground">Asset</TableHead>
+              <TableHead className="text-muted-foreground hidden md:table-cell">Type</TableHead>
               <TableHead className="text-muted-foreground">Status</TableHead>
               <TableHead className="text-muted-foreground hidden sm:table-cell">Time</TableHead>
               <TableHead className="text-muted-foreground">Vulns</TableHead>
@@ -55,7 +62,19 @@ export function RecentScansTable() {
           <TableBody>
             {recentScans.map((scan) => (
               <TableRow key={scan.id} className="border-border hover:bg-secondary/50">
-                <TableCell className="font-mono text-sm text-foreground">{scan.repo}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-sm text-foreground">{scan.asset}</span>
+                    {scan.autoFixed && (
+                      <Badge variant="outline" className="border-success/30 text-success text-[9px]">Auto-Fix Applied</Badge>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  <Badge variant="outline" className={`text-[10px] ${typeColors[scan.assetType]}`}>
+                    {scan.assetType}
+                  </Badge>
+                </TableCell>
                 <TableCell><StatusBadge status={scan.status} /></TableCell>
                 <TableCell className="text-muted-foreground text-sm hidden sm:table-cell">{scan.time}</TableCell>
                 <TableCell>
@@ -80,7 +99,7 @@ export function RecentScansTable() {
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                            onClick={() => toast.success(`Re-scan queued for ${scan.repo}`)}
+                            onClick={() => toast.success(`Re-scan queued for ${scan.asset}`)}
                           >
                             <RotateCcw className="h-3.5 w-3.5" />
                           </Button>

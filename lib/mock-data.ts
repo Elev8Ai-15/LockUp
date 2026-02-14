@@ -1,60 +1,69 @@
+/* Next steps: Connect to Temporal backend for real agents + DAST integration */
+
 export const stats = {
-  totalScans: 248,
-  vulnsFound: 47,
-  avgSecurityScore: 92,
-  blockchainAudits: 12,
+  totalScans: 1247,
+  vulnsFixed: 892,
+  aiFixRate: 96,
+  assetsScanned: 312,
 }
 
 export type ScanStatus = "completed" | "running" | "failed" | "queued"
 export type Severity = "critical" | "high" | "medium" | "low"
-export type VulnType = "SAST" | "SCA" | "Blockchain"
-export type RepoType = "Web" | "AI" | "Blockchain"
+export type VulnType = "SAST" | "DAST" | "SCA" | "Web" | "App" | "Blockchain" | "Shadow AI"
+export type AssetType = "Repo" | "Website" | "WebApp" | "SmartContract"
 
 export interface RecentScan {
   id: string
-  repo: string
+  asset: string
+  assetType: AssetType
   status: ScanStatus
   time: string
   vulns: number
   language: string
+  autoFixed?: boolean
 }
 
 export const recentScans: RecentScan[] = [
-  { id: "1", repo: "frontend-app", status: "completed", time: "2 min ago", vulns: 3, language: "TypeScript" },
-  { id: "2", repo: "smart-contracts", status: "completed", time: "5 min ago", vulns: 7, language: "Solidity" },
-  { id: "3", repo: "ai-agent-service", status: "running", time: "Running...", vulns: 0, language: "Python" },
-  { id: "4", repo: "defi-protocol", status: "completed", time: "12 min ago", vulns: 2, language: "Solidity" },
-  { id: "5", repo: "api-gateway", status: "failed", time: "18 min ago", vulns: 0, language: "Go" },
-  { id: "6", repo: "nft-marketplace", status: "completed", time: "25 min ago", vulns: 5, language: "TypeScript" },
-  { id: "7", repo: "ml-pipeline", status: "queued", time: "Queued", vulns: 0, language: "Python" },
+  { id: "1", asset: "frontend-app", assetType: "Repo", status: "completed", time: "2 min ago", vulns: 3, language: "TypeScript", autoFixed: true },
+  { id: "2", asset: "vault-contracts", assetType: "SmartContract", status: "completed", time: "5 min ago", vulns: 7, language: "Solidity" },
+  { id: "3", asset: "yoursite.com", assetType: "Website", status: "running", time: "Running...", vulns: 0, language: "HTML/JS" },
+  { id: "4", asset: "app.example.com", assetType: "WebApp", status: "completed", time: "12 min ago", vulns: 2, language: "React Native", autoFixed: true },
+  { id: "5", asset: "api-gateway", assetType: "Repo", status: "failed", time: "18 min ago", vulns: 0, language: "Go" },
+  { id: "6", asset: "nft-marketplace", assetType: "SmartContract", status: "completed", time: "25 min ago", vulns: 5, language: "Solidity" },
+  { id: "7", asset: "ml-pipeline", assetType: "Repo", status: "queued", time: "Queued", vulns: 0, language: "Python" },
 ]
 
-export interface Repository {
+export interface Asset {
   id: string
   name: string
+  type: AssetType
   language: string
   lastScan: string
   securityScore: number
-  type: RepoType
   connected: boolean
-  stars: number
+  shadowAI?: number
+  stars?: number
 }
 
-export const repositories: Repository[] = [
-  { id: "1", name: "frontend-app", language: "TypeScript", lastScan: "2 min ago", securityScore: 94, type: "Web", connected: true, stars: 128 },
-  { id: "2", name: "smart-contracts", language: "Solidity", lastScan: "5 min ago", securityScore: 78, type: "Blockchain", connected: true, stars: 342 },
-  { id: "3", name: "ai-agent-service", language: "Python", lastScan: "Running...", securityScore: 88, type: "AI", connected: true, stars: 67 },
-  { id: "4", name: "defi-protocol", language: "Solidity", lastScan: "12 min ago", securityScore: 82, type: "Blockchain", connected: true, stars: 891 },
-  { id: "5", name: "api-gateway", language: "Go", lastScan: "18 min ago", securityScore: 96, type: "Web", connected: true, stars: 45 },
-  { id: "6", name: "nft-marketplace", language: "TypeScript", lastScan: "25 min ago", securityScore: 71, type: "Blockchain", connected: true, stars: 234 },
-  { id: "7", name: "ml-pipeline", language: "Python", lastScan: "1 hr ago", securityScore: 91, type: "AI", connected: true, stars: 156 },
-  { id: "8", name: "token-bridge", language: "Rust", lastScan: "Never", securityScore: 0, type: "Blockchain", connected: false, stars: 512 },
-  { id: "9", name: "chatbot-ui", language: "TypeScript", lastScan: "3 hrs ago", securityScore: 87, type: "AI", connected: true, stars: 73 },
+export const assets: Asset[] = [
+  { id: "1", name: "frontend-app", type: "Repo", language: "TypeScript", lastScan: "2 min ago", securityScore: 94, connected: true, shadowAI: 12, stars: 128 },
+  { id: "2", name: "vault-contracts", type: "SmartContract", language: "Solidity", lastScan: "5 min ago", securityScore: 78, connected: true, stars: 342 },
+  { id: "3", name: "ai-agent-service", type: "Repo", language: "Python", lastScan: "Running...", securityScore: 88, connected: true, shadowAI: 47, stars: 67 },
+  { id: "4", name: "defi-protocol", type: "SmartContract", language: "Solidity", lastScan: "12 min ago", securityScore: 82, connected: true },
+  { id: "5", name: "yoursite.com", type: "Website", language: "HTML/JS/CSS", lastScan: "30 min ago", securityScore: 91, connected: true },
+  { id: "6", name: "app.example.com", type: "WebApp", language: "React Native", lastScan: "1 hr ago", securityScore: 87, connected: true, shadowAI: 23 },
+  { id: "7", name: "nft-marketplace", type: "SmartContract", language: "TypeScript", lastScan: "25 min ago", securityScore: 71, connected: true },
+  { id: "8", name: "token-bridge", type: "SmartContract", language: "Rust", lastScan: "Never", securityScore: 0, connected: false },
+  { id: "9", name: "chatbot-ui", type: "Repo", language: "TypeScript", lastScan: "3 hrs ago", securityScore: 87, connected: true, shadowAI: 35 },
+  { id: "10", name: "store.brand.io", type: "Website", language: "Next.js", lastScan: "45 min ago", securityScore: 96, connected: true },
+  { id: "11", name: "mobile-banking-app", type: "WebApp", language: "Flutter", lastScan: "2 hrs ago", securityScore: 83, connected: true, shadowAI: 8 },
+  { id: "12", name: "admin-dashboard", type: "WebApp", language: "Vue.js", lastScan: "4 hrs ago", securityScore: 90, connected: true },
 ]
 
 export interface ActiveScan {
   id: string
-  repo: string
+  asset: string
+  assetType: AssetType
   tool: string
   progress: number
   status: "scanning" | "analyzing" | "reporting"
@@ -65,21 +74,23 @@ export interface ActiveScan {
 export const activeScans: ActiveScan[] = [
   {
     id: "1",
-    repo: "ai-agent-service",
-    tool: "Semgrep",
+    asset: "yoursite.com",
+    assetType: "Website",
+    tool: "OWASP ZAP",
     progress: 67,
     status: "scanning",
     startedAt: "3 min ago",
     logs: [
-      "[INFO] Scanning src/agents/core.py...",
-      "[WARN] Potential SQL injection at line 142",
-      "[INFO] Analyzing dependency tree...",
-      "[INFO] Found 3 patterns matching rules...",
+      "[INFO] Spider crawling https://yoursite.com...",
+      "[INFO] Found 147 endpoints",
+      "[WARN] Reflected XSS on /search?q=",
+      "[INFO] Testing SQL injection vectors...",
     ],
   },
   {
     id: "2",
-    repo: "defi-protocol",
+    asset: "defi-protocol",
+    assetType: "SmartContract",
     tool: "Slither",
     progress: 34,
     status: "analyzing",
@@ -92,22 +103,24 @@ export const activeScans: ActiveScan[] = [
   },
   {
     id: "3",
-    repo: "frontend-app",
-    tool: "Trivy",
+    asset: "app.example.com",
+    assetType: "WebApp",
+    tool: "Nuclei",
     progress: 89,
     status: "reporting",
     startedAt: "5 min ago",
     logs: [
-      "[INFO] Scanning container image...",
-      "[INFO] Checking OS packages...",
-      "[INFO] Checking language packages...",
-      "[INFO] Generating SBOM...",
-      "[DONE] 2 vulnerabilities found",
+      "[INFO] Loading 4,521 templates...",
+      "[INFO] Testing CORS misconfiguration...",
+      "[WARN] Insecure CORS policy detected",
+      "[INFO] Testing API endpoints...",
+      "[DONE] 3 vulnerabilities found",
     ],
   },
   {
     id: "4",
-    repo: "smart-contracts",
+    asset: "vault-contracts",
+    assetType: "SmartContract",
     tool: "Mythril",
     progress: 12,
     status: "scanning",
@@ -119,16 +132,16 @@ export const activeScans: ActiveScan[] = [
   },
   {
     id: "5",
-    repo: "nft-marketplace",
-    tool: "Nuclei",
+    asset: "frontend-app",
+    assetType: "Repo",
+    tool: "Semgrep",
     progress: 55,
     status: "scanning",
     startedAt: "2 min ago",
     logs: [
-      "[INFO] Loading 4,521 templates...",
-      "[INFO] Testing XSS vectors...",
-      "[WARN] Reflected XSS at /api/search",
-      "[INFO] Testing SSRF vectors...",
+      "[INFO] Scanning src/ directory...",
+      "[WARN] Potential prototype pollution in utils.ts",
+      "[INFO] Analyzing import graph...",
     ],
   },
 ]
@@ -138,7 +151,7 @@ export interface Vulnerability {
   title: string
   severity: Severity
   type: VulnType
-  repo: string
+  asset: string
   file: string
   line: number
   cvss: number
@@ -153,7 +166,7 @@ export const vulnerabilities: Vulnerability[] = [
     title: "Reentrancy in withdraw()",
     severity: "critical",
     type: "Blockchain",
-    repo: "smart-contracts",
+    asset: "vault-contracts",
     file: "contracts/Vault.sol",
     line: 89,
     cvss: 9.8,
@@ -163,28 +176,28 @@ export const vulnerabilities: Vulnerability[] = [
   },
   {
     id: "VULN-002",
-    title: "SQL Injection in search endpoint",
+    title: "Reflected XSS on search endpoint",
     severity: "critical",
-    type: "SAST",
-    repo: "ai-agent-service",
-    file: "src/routes/search.py",
-    line: 142,
+    type: "Web",
+    asset: "yoursite.com",
+    file: "/search?q=",
+    line: 0,
     cvss: 9.1,
     status: "open",
-    description: "User input is directly interpolated into SQL query without parameterization.",
+    description: "User input from query parameter is reflected in the DOM without sanitization, enabling script injection on the scanned website.",
     detectedAt: "3 min ago",
   },
   {
     id: "VULN-003",
-    title: "Unchecked return value in transfer()",
+    title: "Insecure CORS policy",
     severity: "high",
-    type: "Blockchain",
-    repo: "defi-protocol",
-    file: "contracts/Bridge.sol",
-    line: 234,
+    type: "App",
+    asset: "app.example.com",
+    file: "server/cors.config.js",
+    line: 12,
     cvss: 8.2,
     status: "open",
-    description: "The return value of ERC20.transfer() is not checked, which could silently fail.",
+    description: "Access-Control-Allow-Origin is set to wildcard (*) allowing any domain to make requests to the app's API endpoints.",
     detectedAt: "12 min ago",
   },
   {
@@ -192,7 +205,7 @@ export const vulnerabilities: Vulnerability[] = [
     title: "Prototype Pollution in lodash",
     severity: "high",
     type: "SCA",
-    repo: "frontend-app",
+    asset: "frontend-app",
     file: "package.json",
     line: 24,
     cvss: 7.5,
@@ -202,49 +215,49 @@ export const vulnerabilities: Vulnerability[] = [
   },
   {
     id: "VULN-005",
-    title: "Reflected XSS via search parameter",
-    severity: "high",
-    type: "SAST",
-    repo: "nft-marketplace",
-    file: "pages/search.tsx",
-    line: 67,
-    cvss: 7.1,
+    title: "SQL Injection in search API",
+    severity: "critical",
+    type: "DAST",
+    asset: "yoursite.com",
+    file: "/api/search",
+    line: 0,
+    cvss: 9.5,
     status: "open",
-    description: "User input from query parameter is rendered without sanitization.",
-    detectedAt: "25 min ago",
+    description: "Dynamic SQL query constructed from user input without parameterization. Found via active DAST crawling.",
+    detectedAt: "10 min ago",
   },
   {
     id: "VULN-006",
-    title: "Integer overflow in token minting",
+    title: "AI-generated code: insecure random",
     severity: "medium",
-    type: "Blockchain",
-    repo: "smart-contracts",
-    file: "contracts/Token.sol",
-    line: 156,
+    type: "Shadow AI",
+    asset: "chatbot-ui",
+    file: "src/lib/auth.ts",
+    line: 42,
     cvss: 6.5,
     status: "open",
-    description: "Multiplication of user-supplied amount could overflow, bypassing max supply check.",
-    detectedAt: "5 min ago",
-  },
-  {
-    id: "VULN-007",
-    title: "Insecure deserialization",
-    severity: "medium",
-    type: "SAST",
-    repo: "ai-agent-service",
-    file: "src/utils/parser.py",
-    line: 89,
-    cvss: 6.3,
-    status: "ignored",
-    description: "pickle.loads() is used to deserialize untrusted data, allowing arbitrary code execution.",
+    description: "AI-generated token generation uses Math.random() instead of crypto.getRandomValues(). Detected as vibe-coded function.",
     detectedAt: "1 hr ago",
   },
   {
+    id: "VULN-007",
+    title: "Missing security headers",
+    severity: "medium",
+    type: "Web",
+    asset: "store.brand.io",
+    file: "next.config.js",
+    line: 5,
+    cvss: 5.8,
+    status: "open",
+    description: "Missing Content-Security-Policy, X-Frame-Options, and Strict-Transport-Security headers.",
+    detectedAt: "45 min ago",
+  },
+  {
     id: "VULN-008",
-    title: "Missing access control on admin function",
+    title: "Missing access control on admin",
     severity: "high",
     type: "Blockchain",
-    repo: "defi-protocol",
+    asset: "defi-protocol",
     file: "contracts/Governance.sol",
     line: 45,
     cvss: 8.6,
@@ -254,23 +267,10 @@ export const vulnerabilities: Vulnerability[] = [
   },
   {
     id: "VULN-009",
-    title: "Outdated OpenSSL dependency",
-    severity: "low",
-    type: "SCA",
-    repo: "api-gateway",
-    file: "go.mod",
-    line: 12,
-    cvss: 3.1,
-    status: "fixed",
-    description: "OpenSSL version 1.1.1 is end-of-life and no longer receives security updates.",
-    detectedAt: "18 min ago",
-  },
-  {
-    id: "VULN-010",
     title: "Hardcoded API key in source",
     severity: "medium",
     type: "SAST",
-    repo: "chatbot-ui",
+    asset: "chatbot-ui",
     file: "src/lib/api.ts",
     line: 5,
     cvss: 5.3,
@@ -278,16 +278,45 @@ export const vulnerabilities: Vulnerability[] = [
     description: "OpenAI API key is hardcoded in the source file instead of using environment variables.",
     detectedAt: "3 hrs ago",
   },
+  {
+    id: "VULN-010",
+    title: "Exposed debug endpoint",
+    severity: "high",
+    type: "DAST",
+    asset: "app.example.com",
+    file: "/debug/vars",
+    line: 0,
+    cvss: 7.8,
+    status: "open",
+    description: "Debug endpoint exposes environment variables including database credentials to unauthenticated requests.",
+    detectedAt: "1 hr ago",
+  },
 ]
 
 export const securityTrendData = [
-  { month: "Jul", vulns: 28, fixed: 22, score: 85 },
-  { month: "Aug", vulns: 35, fixed: 30, score: 83 },
-  { month: "Sep", vulns: 22, fixed: 20, score: 88 },
-  { month: "Oct", vulns: 31, fixed: 28, score: 86 },
-  { month: "Nov", vulns: 18, fixed: 17, score: 91 },
-  { month: "Dec", vulns: 24, fixed: 23, score: 89 },
-  { month: "Jan", vulns: 15, fixed: 14, score: 92 },
+  { month: "Aug", code: 28, web: 15, app: 8, blockchain: 12, fixed: 52 },
+  { month: "Sep", code: 22, web: 11, app: 6, blockchain: 9, fixed: 40 },
+  { month: "Oct", code: 31, web: 18, app: 10, blockchain: 14, fixed: 61 },
+  { month: "Nov", code: 18, web: 9, app: 5, blockchain: 7, fixed: 35 },
+  { month: "Dec", code: 24, web: 12, app: 7, blockchain: 10, fixed: 48 },
+  { month: "Jan", code: 15, web: 7, app: 4, blockchain: 6, fixed: 30 },
+  { month: "Feb", code: 12, web: 5, app: 3, blockchain: 4, fixed: 23 },
+]
+
+export interface Agent {
+  id: string
+  name: string
+  role: string
+  status: "active" | "idle" | "thinking"
+  currentTask: string
+  color: string
+}
+
+export const agents: Agent[] = [
+  { id: "1", name: "Triage Agent", role: "Classifies and prioritizes incoming vulnerabilities", status: "active", currentTask: "Classifying XSS on yoursite.com...", color: "#89CFF0" },
+  { id: "2", name: "Exploit Agent", role: "Validates exploitability with proof-of-concept", status: "thinking", currentTask: "Generating PoC for reentrancy...", color: "#EF4444" },
+  { id: "3", name: "Fix Agent", role: "Generates secure code patches and config fixes", status: "active", currentTask: "Patching XSS on website...", color: "#228B22" },
+  { id: "4", name: "Validator Agent", role: "Runs tests and verifies fixes don't break builds", status: "idle", currentTask: "Awaiting fix from Fix Agent...", color: "#D4A054" },
 ]
 
 export interface BlockchainVuln {
@@ -297,20 +326,20 @@ export interface BlockchainVuln {
 }
 
 export const blockchainVulns: BlockchainVuln[] = [
-  { type: "Reentrancy", count: 2, severity: "critical" },
+  { type: "Reentrancy", count: 3, severity: "critical" },
+  { type: "Oracle Manipulation", count: 1, severity: "high" },
+  { type: "Web-Linked", count: 2, severity: "high" },
+  { type: "Integer Overflow", count: 2, severity: "medium" },
   { type: "Access Control", count: 1, severity: "high" },
-  { type: "Integer Overflow", count: 3, severity: "medium" },
-  { type: "Unchecked Return", count: 2, severity: "high" },
-  { type: "Front-Running", count: 1, severity: "medium" },
   { type: "Gas Optimization", count: 5, severity: "low" },
 ]
 
 export const gasOptimizations = [
-  { function: "transfer()", currentGas: 45_230, optimizedGas: 32_100, savings: "29%" },
-  { function: "approve()", currentGas: 28_450, optimizedGas: 21_200, savings: "25%" },
-  { function: "mint()", currentGas: 67_800, optimizedGas: 51_300, savings: "24%" },
-  { function: "stake()", currentGas: 89_100, optimizedGas: 72_400, savings: "19%" },
-  { function: "withdraw()", currentGas: 54_600, optimizedGas: 43_800, savings: "20%" },
+  { function: "transfer()", currentGas: 45_230, optimizedGas: 32_100, savings: "29%", suggestion: "Use unchecked block for safe arithmetic" },
+  { function: "approve()", currentGas: 28_450, optimizedGas: 21_200, savings: "25%", suggestion: "Cache storage variable in memory" },
+  { function: "mint()", currentGas: 67_800, optimizedGas: 51_300, savings: "24%", suggestion: "Use ERC721A batch minting pattern" },
+  { function: "stake()", currentGas: 89_100, optimizedGas: 72_400, savings: "19%", suggestion: "Replace mapping with packed struct" },
+  { function: "withdraw()", currentGas: 54_600, optimizedGas: 43_800, savings: "20%", suggestion: "Combine multiple SLOADs into one" },
 ]
 
 export const exampleContracts = [
@@ -319,12 +348,20 @@ export const exampleContracts = [
   { name: "Custom NFT Drop", address: "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D", type: "NFT" },
 ]
 
-export const fundFlowData = [
-  { source: "User", target: "Router", value: 100 },
-  { source: "Router", target: "Pool A", value: 60 },
-  { source: "Router", target: "Pool B", value: 40 },
-  { source: "Pool A", target: "Treasury", value: 3 },
-  { source: "Pool B", target: "Treasury", value: 2 },
-  { source: "Pool A", target: "LP Holders", value: 57 },
-  { source: "Pool B", target: "LP Holders", value: 38 },
+export const runtimeMetrics = [
+  { time: "00:00", apiCalls: 120, memory: 45, onChain: 3, webTraffic: 890 },
+  { time: "04:00", apiCalls: 80, memory: 42, onChain: 1, webTraffic: 340 },
+  { time: "08:00", apiCalls: 250, memory: 58, onChain: 5, webTraffic: 1200 },
+  { time: "12:00", apiCalls: 380, memory: 67, onChain: 8, webTraffic: 2100 },
+  { time: "16:00", apiCalls: 420, memory: 72, onChain: 12, webTraffic: 2800 },
+  { time: "20:00", apiCalls: 290, memory: 55, onChain: 6, webTraffic: 1600 },
+  { time: "Now", apiCalls: 310, memory: 61, onChain: 7, webTraffic: 1900 },
+]
+
+export const shadowAIDetections = [
+  { file: "src/utils/auth.ts", confidence: 92, type: "Token generation", risk: "high" as Severity, asset: "chatbot-ui" },
+  { file: "src/api/search.py", confidence: 87, type: "SQL query builder", risk: "critical" as Severity, asset: "ai-agent-service" },
+  { file: "components/Form.tsx", confidence: 74, type: "Input validation", risk: "medium" as Severity, asset: "frontend-app" },
+  { file: "lib/crypto.js", confidence: 95, type: "Encryption wrapper", risk: "high" as Severity, asset: "app.example.com" },
+  { file: "hooks/useAuth.ts", confidence: 68, type: "Session handler", risk: "medium" as Severity, asset: "admin-dashboard" },
 ]

@@ -4,10 +4,12 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
-  GitBranch,
+  Box,
   ScanLine,
   FileText,
   Shield,
+  Bot,
+  Activity,
   Settings,
   ShieldCheck,
 } from "lucide-react"
@@ -25,10 +27,12 @@ import {
 
 const navItems = [
   { title: "Dashboard", href: "/", icon: LayoutDashboard },
-  { title: "Repositories", href: "/repositories", icon: GitBranch },
-  { title: "Active Scans", href: "/active-scans", icon: ScanLine },
+  { title: "Assets", href: "/assets", icon: Box },
+  { title: "Scans", href: "/scans", icon: ScanLine },
   { title: "Reports", href: "/reports", icon: FileText },
-  { title: "Blockchain Security", href: "/blockchain", icon: Shield },
+  { title: "Agents", href: "/agents", icon: Bot },
+  { title: "Blockchain", href: "/blockchain", icon: Shield },
+  { title: "Runtime", href: "/runtime", icon: Activity },
   { title: "Settings", href: "/settings", icon: Settings },
 ]
 
@@ -39,8 +43,8 @@ export function AppSidebar() {
     <Sidebar variant="sidebar" collapsible="icon">
       <SidebarHeader className="border-b border-border px-4 py-4">
         <Link href="/" className="flex items-center gap-2">
-          <ShieldCheck className="h-7 w-7 text-primary shrink-0" />
-          <span className="font-mono text-lg font-bold tracking-tight text-foreground group-data-[collapsible=icon]:hidden">
+          <ShieldCheck className="h-7 w-7 text-primary shrink-0 drop-shadow-[0_0_6px_rgba(137,207,240,0.5)]" />
+          <span className="font-mono text-lg font-bold tracking-tight text-foreground glow-text-blue group-data-[collapsible=icon]:hidden">
             AppScan
           </span>
         </Link>
@@ -72,8 +76,8 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="border-t border-border p-4">
-        <p className="text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-          Powered by 18 OSS tools + AI
+        <p className="text-[10px] text-muted-foreground leading-relaxed group-data-[collapsible=icon]:hidden">
+          Powered by 28 OSS tools + 4 Agentic LLMs
         </p>
       </SidebarFooter>
     </Sidebar>

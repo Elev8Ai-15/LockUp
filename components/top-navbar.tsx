@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Search, Bell, Plus, ChevronDown, Zap, Crown } from "lucide-react"
+import { Search, Bell, Plus, ChevronDown, Zap, Crown, Globe, Smartphone, Code, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -20,16 +20,17 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { toast } from "sonner"
 
 export function TopNavbar() {
   const [newScanOpen, setNewScanOpen] = useState(false)
 
-  const handleNewScan = () => {
+  const handleNewScan = (type: string) => {
     setNewScanOpen(false)
-    toast.success("Scan queued successfully!", {
-      description: "Your repository will be scanned in approximately 47 seconds.",
+    toast.success(`${type} scan queued successfully!`, {
+      description: "Estimated completion: ~47 seconds.",
     })
   }
 
@@ -42,21 +43,43 @@ export function TopNavbar() {
           <div className="relative w-full max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search repos, vulns, contracts..."
+              placeholder="Search repos, sites, apps, contracts..."
               className="pl-9 bg-secondary border-border text-foreground placeholder:text-muted-foreground"
             />
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5 font-semibold"
-            onClick={() => setNewScanOpen(true)}
-          >
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">New Scan</span>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5 font-semibold"
+              >
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">New Scan</span>
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52 bg-card border-border text-foreground">
+              <DropdownMenuItem className="gap-2 focus:bg-secondary focus:text-foreground" onClick={() => handleNewScan("Code Repo")}>
+                <Code className="h-4 w-4 text-primary" />
+                Code Repo
+              </DropdownMenuItem>
+              <DropdownMenuItem className="gap-2 focus:bg-secondary focus:text-foreground" onClick={() => handleNewScan("Website URL")}>
+                <Globe className="h-4 w-4 text-primary" />
+                Website URL
+              </DropdownMenuItem>
+              <DropdownMenuItem className="gap-2 focus:bg-secondary focus:text-foreground" onClick={() => handleNewScan("Web/Mobile App")}>
+                <Smartphone className="h-4 w-4 text-primary" />
+                Web/Mobile App
+              </DropdownMenuItem>
+              <DropdownMenuItem className="gap-2 focus:bg-secondary focus:text-foreground" onClick={() => handleNewScan("Smart Contract")}>
+                <Shield className="h-4 w-4 text-accent" />
+                Smart Contract
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground">
             <Bell className="h-4 w-4" />
@@ -70,6 +93,7 @@ export function TopNavbar() {
                   <AvatarFallback className="bg-secondary text-foreground text-xs">DS</AvatarFallback>
                 </Avatar>
                 <span className="hidden sm:inline text-sm">dev_sec</span>
+                <Badge variant="outline" className="hidden sm:inline-flex border-primary/30 text-primary text-[9px] ml-1">PRO</Badge>
                 <ChevronDown className="h-3 w-3 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>
@@ -86,35 +110,6 @@ export function TopNavbar() {
           </DropdownMenu>
         </div>
       </header>
-
-      <Dialog open={newScanOpen} onOpenChange={setNewScanOpen}>
-        <DialogContent className="bg-card border-border text-foreground">
-          <DialogHeader>
-            <DialogTitle className="text-foreground">Start New Scan</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Choose a repository to scan for vulnerabilities.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-3 pt-2">
-            <Input
-              placeholder="Enter repository URL or name..."
-              className="bg-secondary border-border text-foreground placeholder:text-muted-foreground"
-            />
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1 border-border text-foreground hover:bg-secondary" onClick={handleNewScan}>
-                <Zap className="h-4 w-4 mr-2 text-primary" />
-                Quick Scan
-              </Button>
-              <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleNewScan}>
-                Deep Scan
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground text-center">
-              Scan in ~47 seconds
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   )
 }
