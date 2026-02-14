@@ -46,7 +46,7 @@ export default function ScansPage() {
       setScans((prev) =>
         prev.map((scan) => ({
           ...scan,
-          progress: Math.min(scan.progress + Math.random() * 2, 99),
+          progress: Math.min(scan.progress + 1.2, 99),
         }))
       )
     }, 1500)
