@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { motion } from "framer-motion"
+import { motion } from "motion/react"
 import {
   Shield,
   Upload,
@@ -76,7 +76,7 @@ function RiskGauge({ score }: { score: number }) {
           <span className="text-xs text-muted-foreground">/100</span>
         </div>
       </div>
-      <span className="text-sm font-medium mt-2" style={{ color }}>{label}</span>
+      <span className={`text-sm font-medium mt-2 ${score >= 80 ? "text-success" : score >= 60 ? "text-warning" : "text-destructive"}`}>{label}</span>
     </div>
   )
 }

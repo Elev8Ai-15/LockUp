@@ -1,13 +1,15 @@
 {
-  "name": "appscan-dev",
-  "version": "0.1.0",
+  "name": "lockup",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -44,7 +46,6 @@
     "cmdk": "1.0.4",
     "date-fns": "4.1.0",
     "embla-carousel-react": "8.5.1",
-    "framer-motion": "^11.15.0",
     "geist": "^1.7.0",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
@@ -57,12 +58,23 @@
     "react-resizable-panels": "^2.1.7",
     "recharts": "2.15.4",
     "sonner": "^1.7.4",
+    "motion": "^12.0.0",
     "tailwind-merge": "^3.3.1",
     "vaul": "^1.1.2",
     "zod": "3.25.76"
   },
   "devDependencies": {
-    "autoprefixer": "^10.4.20",
+    "@eslint/eslintrc": "^3",
+    "@next/eslint-plugin-next": "^16",
+    "@playwright/test": "^1.49.0",
+    "@testing-library/jest-dom": "^6.6.0",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "eslint": "^9",
+    "eslint-config-next": "^16",
+    "jsdom": "^25.0.0",
+    "vitest": "^2.1.0",
     "@tailwindcss/postcss": "^4.1.9",
     "@types/node": "^22",
     "@types/react": "^19",

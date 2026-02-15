@@ -1,21 +1,12 @@
-/* Next steps: Connect to Temporal backend for real agents + DAST integration */
 import type { Metadata, Viewport } from 'next'
-import localFont from 'next/font/local'
+import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { ThemeProvider } from '@/components/theme-provider'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import './globals.css'
 
-const geistSans = localFont({
-  src: '../node_modules/geist/dist/fonts/geist-sans/Geist-Variable.woff2',
-  variable: '--font-geist-sans',
-  display: 'swap',
-})
-
-const geistMono = localFont({
-  src: '../node_modules/geist/dist/fonts/geist-mono/GeistMono-Variable.woff2',
-  variable: '--font-geist-mono',
-  display: 'swap',
-})
+const geistSans = Geist({ subsets: ["latin"], variable: "--font-geist-sans" })
+const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" })
 
 export const metadata: Metadata = {
   title: 'AppScan.dev - Agentic AI Security for Vibe-Coded Apps',
@@ -34,12 +25,19 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased bg-background`} suppressHydrationWarning>
-        <a href="#main-content" className="skip-to-content">Skip to main content</a>
-        <DashboardLayout>
-          {children}
-        </DashboardLayout>
+        <a href="#main-content" className="skip-to-content sr-only focus:not-sr-only focus:absolute focus:z-[9999] focus:p-4 focus:bg-primary focus:text-primary-foreground">Skip to main content</a>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <DashboardLayout>
+            {children}
+          </DashboardLayout>
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>

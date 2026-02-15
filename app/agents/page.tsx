@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { motion } from "framer-motion"
+import { motion } from "motion/react"
 import { Bot, Zap, Terminal, Sliders, Plus, Play, Loader2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { agents } from "@/lib/mock-data"
+import { agentTextColor, agentBgColor } from "@/lib/agent-colors"
 import { toast } from "sonner"
 
 const statusDot: Record<string, string> = {
@@ -96,8 +97,8 @@ export default function AgentsPage() {
               <CardContent className="p-5">
                 <div className="flex items-start gap-3 mb-4">
                   <div className="relative shrink-0">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg" style={{ backgroundColor: `${agent.color}15` }}>
-                      <Bot className="h-5 w-5" style={{ color: agent.color }} />
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${agentBgColor[agent.colorKey]}`}>
+                      <Bot className={`h-5 w-5 ${agentTextColor[agent.colorKey]}`} />
                     </div>
                     <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card ${statusDot[agent.status]}`} />
                   </div>
