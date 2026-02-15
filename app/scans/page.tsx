@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { activeScans, agents, type AssetType } from "@/lib/mock-data"
+import { agentTextColor, agentBgColor } from "@/lib/agent-colors"
 import { toast } from "sonner"
 
 const toolColors: Record<string, string> = {

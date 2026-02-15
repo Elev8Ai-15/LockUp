@@ -5,6 +5,7 @@ import { Bot } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { agents } from "@/lib/mock-data"
+import { agentTextColor, agentBgColor } from "@/lib/agent-colors"
 
 const statusDot: Record<string, string> = {
   active: "bg-success",
@@ -32,8 +33,8 @@ export function AgentSwarm() {
               className="flex items-start gap-3 rounded-lg border border-border bg-secondary/30 p-3"
             >
               <div className="relative shrink-0">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg" style={{ backgroundColor: `${agent.color}15` }}>
-                  <Bot className="h-4 w-4" style={{ color: agent.color }} />
+                <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${agentBgColor[agent.colorKey]}`}>
+                  <Bot className={`h-4 w-4 ${agentTextColor[agent.colorKey]}`} />
                 </div>
                 <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card ${statusDot[agent.status]} ${agent.status === "thinking" ? "animate-pulse" : ""}`} />
               </div>

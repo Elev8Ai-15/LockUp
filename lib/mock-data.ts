@@ -303,20 +303,22 @@ export const securityTrendData = [
   { month: "Feb", code: 12, web: 5, app: 3, blockchain: 4, fixed: 23 },
 ]
 
+export type AgentColorKey = "primary" | "destructive" | "success" | "warning"
+
 export interface Agent {
   id: string
   name: string
   role: string
   status: "active" | "idle" | "thinking"
   currentTask: string
-  color: string
+  colorKey: AgentColorKey
 }
 
 export const agents: Agent[] = [
-  { id: "1", name: "Triage Agent", role: "Classifies and prioritizes incoming vulnerabilities", status: "active", currentTask: "Classifying XSS on yoursite.com...", color: "#89CFF0" },
-  { id: "2", name: "Exploit Agent", role: "Validates exploitability with proof-of-concept", status: "thinking", currentTask: "Generating PoC for reentrancy...", color: "#EF4444" },
-  { id: "3", name: "Fix Agent", role: "Generates secure code patches and config fixes", status: "active", currentTask: "Patching XSS on website...", color: "#228B22" },
-  { id: "4", name: "Validator Agent", role: "Runs tests and verifies fixes don't break builds", status: "idle", currentTask: "Awaiting fix from Fix Agent...", color: "#D4A054" },
+  { id: "1", name: "Triage Agent", role: "Classifies and prioritizes incoming vulnerabilities", status: "active", currentTask: "Classifying XSS on yoursite.com...", colorKey: "primary" },
+  { id: "2", name: "Exploit Agent", role: "Validates exploitability with proof-of-concept", status: "thinking", currentTask: "Generating PoC for reentrancy...", colorKey: "destructive" },
+  { id: "3", name: "Fix Agent", role: "Generates secure code patches and config fixes", status: "active", currentTask: "Patching XSS on website...", colorKey: "success" },
+  { id: "4", name: "Validator Agent", role: "Runs tests and verifies fixes don't break builds", status: "idle", currentTask: "Awaiting fix from Fix Agent...", colorKey: "warning" },
 ]
 
 export interface BlockchainVuln {
