@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
@@ -11,7 +12,6 @@ import {
   Bot,
   Activity,
   Settings,
-  ShieldCheck,
 } from "lucide-react"
 import {
   Sidebar,
@@ -43,9 +43,15 @@ export function AppSidebar() {
     <Sidebar variant="sidebar" collapsible="icon">
       <SidebarHeader className="border-b border-border px-4 py-4">
         <Link href="/" className="flex items-center gap-2">
-          <ShieldCheck className="h-7 w-7 text-primary shrink-0 drop-shadow-[0_0_6px_rgba(137,207,240,0.5)]" />
-          <span className="font-mono text-lg font-bold tracking-tight text-foreground glow-text-blue group-data-[collapsible=icon]:hidden">
-            AppScan
+          <Image
+            src="/images/lockup-logo.jpg"
+            alt="LockUp logo"
+            width={28}
+            height={28}
+            className="rounded shrink-0"
+          />
+          <span className="font-mono text-lg font-bold tracking-tight text-foreground group-data-[collapsible=icon]:hidden">
+            LockUp
           </span>
         </Link>
       </SidebarHeader>
@@ -76,9 +82,18 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="border-t border-border p-4">
-        <p className="text-[10px] text-muted-foreground leading-relaxed group-data-[collapsible=icon]:hidden">
-          Powered by 28 OSS tools + 4 Agentic LLMs
-        </p>
+        <div className="flex flex-col items-center gap-2 group-data-[collapsible=icon]:hidden">
+          <Image
+            src="/images/lockup-logo.jpg"
+            alt="LockUp hero logo"
+            width={80}
+            height={80}
+            className="rounded-lg opacity-80"
+          />
+          <p className="text-[10px] text-muted-foreground leading-relaxed text-center">
+            Powered by 28 OSS tools + 4 Agentic LLMs
+          </p>
+        </div>
       </SidebarFooter>
     </Sidebar>
   )

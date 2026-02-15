@@ -9,9 +9,9 @@ const geistSans = Geist({ subsets: ["latin"], variable: "--font-geist-sans" })
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" })
 
 export const metadata: Metadata = {
-  title: 'AppScan.dev - Agentic AI Security for Vibe-Coded Apps',
+  title: 'LockUp - Agentic AI Security for Vibe-Coded Apps',
   description: 'The agentic AI security platform for vibe-coded apps, websites, web/mobile apps, and blockchain smart contracts. Powered by 28 OSS tools + 4 Agentic LLMs.',
-  generator: 'AppScan.dev',
+  generator: 'LockUp',
 }
 
 export const viewport: Viewport = {
