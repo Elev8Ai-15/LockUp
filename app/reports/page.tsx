@@ -173,11 +173,15 @@ export default function ReportsPage() {
     }, 2500)
   }
 
-  const handleCopy = (code: string) => {
-    navigator.clipboard.writeText(code)
-    setCopied(true)
-    toast.success("Code copied to clipboard!")
-    setTimeout(() => setCopied(false), 2000)
+  const handleCopy = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code)
+      setCopied(true)
+      toast.success("Code copied to clipboard!")
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast.error("Failed to copy to clipboard")
+    }
   }
 
   return (
