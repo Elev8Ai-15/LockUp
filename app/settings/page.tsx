@@ -201,8 +201,8 @@ export default function SettingsPage() {
               <div className="flex flex-col gap-2">
                 <Label className="text-foreground">API Key</Label>
                 <div className="flex gap-2">
-                  <Input value="sk-appscan-xxxx-xxxx-xxxx-xxxxxxxxxxxx" readOnly className="bg-secondary border-border text-muted-foreground font-mono" />
-                  <Button variant="outline" className="border-border text-foreground hover:bg-secondary shrink-0" onClick={() => { navigator.clipboard.writeText("sk-appscan-xxxx-xxxx-xxxx-xxxxxxxxxxxx").then(() => toast.success("API key copied!")).catch(() => toast.error("Failed to copy")) }}>
+                  <Input value="sk-lockup-xxxx-xxxx-xxxx-xxxxxxxxxxxx" readOnly className="bg-secondary border-border text-muted-foreground font-mono" />
+                  <Button variant="outline" className="border-border text-foreground hover:bg-secondary shrink-0" onClick={() => { navigator.clipboard.writeText("sk-lockup-xxxx-xxxx-xxxx-xxxxxxxxxxxx").then(() => toast.success("API key copied!")).catch(() => toast.error("Failed to copy")) }}>
                     <Key className="h-4 w-4" />
                   </Button>
                 </div>

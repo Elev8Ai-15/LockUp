@@ -12,7 +12,7 @@ export default function Error({
   reset: () => void
 }) {
   useEffect(() => {
-    console.error("[AppScan] Uncaught error:", error)
+    console.error("[LockUp] Uncaught error:", error)
   }, [error])
 
   return (
