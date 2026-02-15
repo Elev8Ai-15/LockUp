@@ -7,25 +7,16 @@ import { QuickScan } from "@/components/dashboard/quick-scan"
 export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Overview of your security posture across all assets.
-        </p>
-      </div>
+      <QuickScan />
 
       <StatCards />
 
       <AgentSwarm />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <SecurityTrendChart />
-        </div>
-        <QuickScan />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <SecurityTrendChart />
+        <RecentScansTable />
       </div>
-
-      <RecentScansTable />
     </div>
   )
 }
