@@ -1,7 +1,6 @@
 "use client"
 
-import { useState } from "react"
-import { Search, Bell, Plus, ChevronDown, Zap, Crown, Globe, Smartphone, Code, Shield } from "lucide-react"
+import { Search, Bell, Plus, ChevronDown, Crown, Globe, Smartphone, Code, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -13,30 +12,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { toast } from "sonner"
 
 export function TopNavbar() {
-  const [newScanOpen, setNewScanOpen] = useState(false)
-
   const handleNewScan = (type: string) => {
-    setNewScanOpen(false)
     toast.success(`${type} scan queued successfully!`, {
       description: "Estimated completion: ~47 seconds.",
     })
   }
 
   return (
-    <>
-      <header className="sticky top-0 z-50 flex h-14 items-center gap-4 border-b border-border bg-background/80 backdrop-blur-sm px-4">
+    <header className="sticky top-0 z-50 flex h-14 items-center gap-4 border-b border-border bg-background/80 backdrop-blur-sm px-4">
         <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
 
         <div className="flex-1 flex items-center gap-4">
@@ -109,7 +96,6 @@ export function TopNavbar() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </header>
-    </>
+    </header>
   )
 }

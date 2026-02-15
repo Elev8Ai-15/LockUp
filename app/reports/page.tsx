@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/table"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { vulnerabilities, type Vulnerability, type Severity, type VulnType } from "@/lib/mock-data"
+import { vulnerabilities, type Vulnerability, type Severity } from "@/lib/mock-data"
 import { toast } from "sonner"
 
 const severityStyles: Record<Severity, string> = {
