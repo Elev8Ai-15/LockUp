@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { motion } from "framer-motion"
+import { motion } from "motion/react"
 import { Terminal, Clock, XCircle, Bot, Globe, Smartphone, Zap } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -131,8 +131,8 @@ export default function ScansPage() {
                 {agents.map((agent) => (
                   <div key={agent.id} className="flex items-center gap-2 rounded-lg border border-border bg-secondary/30 p-2.5">
                     <div className="relative">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-md" style={{ backgroundColor: `${agent.color}15` }}>
-                        <Bot className="h-3.5 w-3.5" style={{ color: agent.color }} />
+                      <div className={`flex h-7 w-7 items-center justify-center rounded-md ${agentBgColor[agent.colorKey]}`}>
+                        <Bot className={`h-3.5 w-3.5 ${agentTextColor[agent.colorKey]}`} />
                       </div>
                       <span className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-card ${agent.status === "active" ? "bg-success" : agent.status === "thinking" ? "bg-primary animate-pulse" : "bg-muted-foreground"}`} />
                     </div>

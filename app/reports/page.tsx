@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence } from "motion/react"
 import {
   Search,
   X,
@@ -119,10 +119,16 @@ app.use(cors({
   ],
 }
 
-const agentColors: Record<string, string> = {
-  triage: "#89CFF0",
-  fix: "#228B22",
-  validator: "#D4A054",
+const agentChatTextColors: Record<string, string> = {
+  triage: "text-primary",
+  fix: "text-success",
+  validator: "text-warning",
+}
+
+const agentChatBgColors: Record<string, string> = {
+  triage: "bg-primary/10",
+  fix: "bg-success/10",
+  validator: "bg-warning/10",
 }
 
 export default function ReportsPage() {
@@ -378,11 +384,11 @@ export default function ReportsPage() {
                                 </div>
                               ) : (
                                 <div className="flex items-start gap-2">
-                                  <div className="flex h-5 w-5 items-center justify-center rounded-full shrink-0 mt-0.5" style={{ backgroundColor: `${agentColors[msg.role]}20` }}>
-                                    <Bot className="h-3 w-3" style={{ color: agentColors[msg.role] }} />
+                                  <div className={`flex h-5 w-5 items-center justify-center rounded-full shrink-0 mt-0.5 ${agentChatBgColors[msg.role] || "bg-muted"}`}>
+                                    <Bot className={`h-3 w-3 ${agentChatTextColors[msg.role] || "text-muted-foreground"}`} />
                                   </div>
                                   <div>
-                                    <p className="text-[10px] font-medium mb-0.5" style={{ color: agentColors[msg.role] }}>{msg.agent}</p>
+                                    <p className={`text-[10px] font-medium mb-0.5 ${agentChatTextColors[msg.role] || "text-muted-foreground"}`}>{msg.agent}</p>
                                     <p className="text-sm text-secondary-foreground leading-relaxed">{msg.content}</p>
                                   </div>
                                 </div>

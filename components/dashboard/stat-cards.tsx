@@ -1,6 +1,6 @@
 "use client"
 
-import { motion } from "framer-motion"
+import { motion } from "motion/react"
 import { ScanLine, Bug, Zap, Box } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
