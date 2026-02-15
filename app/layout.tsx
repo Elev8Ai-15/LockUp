@@ -1,4 +1,3 @@
-/* Next steps: Connect to Temporal backend for real agents + DAST integration */
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
@@ -6,8 +5,8 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import './globals.css'
 
-const _geist = Geist({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
+const geistSans = Geist({ subsets: ["latin"] })
+const geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: 'AppScan.dev - Agentic AI Security for Vibe-Coded Apps',
@@ -27,7 +26,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="font-sans antialiased bg-background" suppressHydrationWarning>
+      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased bg-background`} suppressHydrationWarning>
+        <a href="#main-content" className="skip-to-content sr-only focus:not-sr-only focus:absolute focus:z-[9999] focus:p-4 focus:bg-primary focus:text-primary-foreground">Skip to main content</a>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
