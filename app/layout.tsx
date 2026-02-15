@@ -5,8 +5,8 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import './globals.css'
 
-const geistSans = Geist({ subsets: ["latin"] })
-const geistMono = Geist_Mono({ subsets: ["latin"] })
+const geistSans = Geist({ subsets: ["latin"], variable: "--font-geist-sans" })
+const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" })
 
 export const metadata: Metadata = {
   title: 'AppScan.dev - Agentic AI Security for Vibe-Coded Apps',
