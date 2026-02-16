@@ -91,10 +91,10 @@ export default function RuntimePage() {
                       <stop offset="95%" stopColor="#228B22" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1F3D2B" />
-                  <XAxis dataKey="time" stroke="#7C9A8E" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#7C9A8E" fontSize={11} tickLine={false} axisLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: "#132419", border: "1px solid #1F3D2B", borderRadius: "8px", color: "#E2E8F0" }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="time" stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
+                  <Tooltip contentStyle={{ backgroundColor: "var(--card)", border: "1px solid var(--border)", borderRadius: "8px", color: "var(--foreground)" }} />
                   <Area type="monotone" dataKey="apiCalls" stroke="#89CFF0" fill="url(#apiGrad)" strokeWidth={2} name="API Calls" />
                   <Area type="monotone" dataKey="webTraffic" stroke="#228B22" fill="url(#trafficGrad)" strokeWidth={2} name="Web Traffic" />
                 </AreaChart>
@@ -121,10 +121,10 @@ export default function RuntimePage() {
                       <stop offset="95%" stopColor="#A67B5B" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1F3D2B" />
-                  <XAxis dataKey="time" stroke="#7C9A8E" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#7C9A8E" fontSize={11} tickLine={false} axisLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: "#132419", border: "1px solid #1F3D2B", borderRadius: "8px", color: "#E2E8F0" }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="time" stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
+                  <Tooltip contentStyle={{ backgroundColor: "var(--card)", border: "1px solid var(--border)", borderRadius: "8px", color: "var(--foreground)" }} />
                   <Area type="monotone" dataKey="memory" stroke="#D4A054" fill="url(#memGrad)" strokeWidth={2} name="Memory %" />
                   <Area type="monotone" dataKey="onChain" stroke="#A67B5B" fill="url(#chainGrad)" strokeWidth={2} name="On-Chain Events" />
                 </AreaChart>

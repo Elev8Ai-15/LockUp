@@ -409,7 +409,7 @@ export default function ScansPage() {
                         </div>
                         <Progress value={scan.progress} className="h-1.5 bg-secondary [&>div]:bg-primary" />
                       </div>
-                      <ScrollArea className="h-[100px] rounded-lg bg-[#0B1410] border border-border p-2.5">
+                      <ScrollArea className="h-[100px] rounded-lg bg-sidebar border border-border p-2.5">
                         <div className="flex flex-col gap-0.5 font-mono text-[11px]">
                           {scan.logs.map((log, idx) => (
                             <div key={idx} className={log.includes("[WARN]") ? "text-warning" : log.includes("[DONE]") ? "text-success" : "text-muted-foreground"}>
@@ -509,7 +509,7 @@ export default function ScansPage() {
                                   </Button>
                                 </div>
                                 <ScrollArea className="max-h-[180px]">
-                                  <pre className="p-3 text-xs font-mono text-foreground/90 bg-[#0B1410] overflow-x-auto whitespace-pre">{finding.fix}</pre>
+                                  <pre className="p-3 text-xs font-mono text-foreground/90 bg-sidebar overflow-x-auto whitespace-pre">{finding.fix}</pre>
                                 </ScrollArea>
                               </div>
                             </div>

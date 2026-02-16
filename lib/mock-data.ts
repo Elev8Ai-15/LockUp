@@ -1,5 +1,3 @@
-/* Next steps: Connect to Temporal backend for real agents + DAST integration */
-
 export const stats = {
   totalScans: 1247,
   vulnsFixed: 892,

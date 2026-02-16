@@ -38,12 +38,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         </footer>
       </SidebarInset>
       <Toaster
-        theme="dark"
         toastOptions={{
           style: {
-            background: "#132419",
-            border: "1px solid #1F3D2B",
-            color: "#E2E8F0",
+            background: "var(--card)",
+            border: "1px solid var(--border)",
+            color: "var(--foreground)",
           },
         }}
       />
