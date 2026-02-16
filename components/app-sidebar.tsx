@@ -49,6 +49,7 @@ export function AppSidebar() {
             width={28}
             height={28}
             className="rounded shrink-0"
+            priority
           />
           <span className="font-mono text-lg font-bold tracking-tight text-foreground group-data-[collapsible=icon]:hidden">
             LockUp
