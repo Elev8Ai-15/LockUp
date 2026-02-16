@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { Search, Bell, Plus, ChevronDown, Crown, Globe, Smartphone, Code, Shield, X, Check } from "lucide-react"
+import { Search, Bell, ChevronDown, Crown, X } from "lucide-react"
+import { NewScanButton } from "@/components/new-scan-button"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -85,12 +86,6 @@ export function TopNavbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-  const handleNewScan = (type: string) => {
-    toast.success(`${type} scan queued successfully!`, {
-      description: "Estimated completion: ~47 seconds.",
-    })
-  }
-
   const markAsRead = (id: string) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
   }
@@ -159,37 +154,8 @@ export function TopNavbar() {
       </div>
 
       <div className="flex items-center gap-2">
-        {/* New Scan dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              size="sm"
-              className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5 font-semibold"
-            >
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">New Scan</span>
-              <ChevronDown className="h-3 w-3" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52 bg-card border-border text-foreground">
-            <DropdownMenuItem className="gap-2 focus:bg-secondary focus:text-foreground" onClick={() => handleNewScan("Code Repo")}>
-              <Code className="h-4 w-4 text-primary" />
-              Code Repo
-            </DropdownMenuItem>
-            <DropdownMenuItem className="gap-2 focus:bg-secondary focus:text-foreground" onClick={() => handleNewScan("Website URL")}>
-              <Globe className="h-4 w-4 text-primary" />
-              Website URL
-            </DropdownMenuItem>
-            <DropdownMenuItem className="gap-2 focus:bg-secondary focus:text-foreground" onClick={() => handleNewScan("Web/Mobile App")}>
-              <Smartphone className="h-4 w-4 text-primary" />
-              Web/Mobile App
-            </DropdownMenuItem>
-            <DropdownMenuItem className="gap-2 focus:bg-secondary focus:text-foreground" onClick={() => handleNewScan("Smart Contract")}>
-              <Shield className="h-4 w-4 text-accent" />
-              Smart Contract
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* New Scan button */}
+        <NewScanButton />
 
         {/* Notifications popover */}
         <Popover>

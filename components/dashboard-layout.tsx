@@ -1,28 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { TopNavbar } from "@/components/top-navbar"
 import { Toaster } from "sonner"
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted) {
-    return (
-      <div className="flex min-h-svh w-full bg-background">
-        <div className="flex-1 flex flex-col">
-          <main id="main-content" className="flex-1 grid-bg p-4 md:p-6">{children}</main>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -38,12 +21,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         </footer>
       </SidebarInset>
       <Toaster
-        theme="dark"
         toastOptions={{
           style: {
-            background: "#132419",
-            border: "1px solid #1F3D2B",
-            color: "#E2E8F0",
+            background: "var(--card)",
+            border: "1px solid var(--border)",
+            color: "var(--foreground)",
           },
         }}
       />

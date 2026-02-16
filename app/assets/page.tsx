@@ -84,6 +84,13 @@ function AssetCard({ asset, i }: { asset: typeof assets[0]; i: number }) {
             </TooltipProvider>
           )}
 
+          {(asset.crawlDepth || asset.endpoints) && (
+            <div className="flex items-center gap-3 mb-3 text-xs text-muted-foreground">
+              {asset.crawlDepth && <span>Depth: {asset.crawlDepth}</span>}
+              {asset.endpoints && <span>Endpoints: {asset.endpoints}</span>}
+            </div>
+          )}
+
           <div className="flex items-center gap-2 mb-3">
             <span className="text-xs text-muted-foreground">Last scan: {asset.lastScan}</span>
           </div>
@@ -162,8 +169,11 @@ export default function AssetsPage() {
         />
       </div>
 
-      <Tabs defaultValue="repos" className="w-full">
+      <Tabs defaultValue="all" className="w-full">
         <TabsList className="bg-secondary border border-border">
+          <TabsTrigger value="all" className="data-[state=active]:bg-card data-[state=active]:text-foreground text-muted-foreground gap-1.5">
+            All Assets
+          </TabsTrigger>
           <TabsTrigger value="repos" className="data-[state=active]:bg-card data-[state=active]:text-foreground text-muted-foreground gap-1.5">
             <GitBranch className="h-3.5 w-3.5" />
             Repos
@@ -181,6 +191,25 @@ export default function AssetsPage() {
             Smart Contracts
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="all">
+          {(() => {
+            const filtered = assets.filter((a) => a.name.toLowerCase().includes(search.toLowerCase()))
+            return filtered.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {filtered.map((asset, i) => (
+                  <AssetCard key={asset.id} asset={asset} i={i} />
+                ))}
+              </div>
+            ) : (
+              <Card className="bg-card border-border">
+                <CardContent className="p-12 text-center">
+                  <p className="text-muted-foreground">No assets found matching your search.</p>
+                </CardContent>
+              </Card>
+            )
+          })()}
+        </TabsContent>
 
         {(["repos", "websites", "apps", "contracts"] as const).map((tab) => {
           const typeMap: Record<string, AssetType> = {

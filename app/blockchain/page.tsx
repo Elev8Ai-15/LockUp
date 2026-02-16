@@ -55,14 +55,14 @@ const severityColors: Record<Severity, string> = {
 function RiskGauge({ score }: { score: number }) {
   const circumference = 2 * Math.PI * 45
   const offset = circumference - (score / 100) * circumference
-  const color = score >= 80 ? "#228B22" : score >= 60 ? "#D4A054" : "#EF4444"
+  const color = score >= 80 ? "var(--success)" : score >= 60 ? "var(--warning)" : "var(--destructive)"
   const label = score >= 80 ? "Low Risk" : score >= 60 ? "Medium Risk" : "High Risk"
 
   return (
     <div className="flex flex-col items-center">
       <div className="relative">
         <svg width="140" height="140" viewBox="0 0 120 120" className="-rotate-90">
-          <circle cx="60" cy="60" r="45" fill="none" stroke="#1F3D2B" strokeWidth="10" />
+          <circle cx="60" cy="60" r="45" fill="none" stroke="var(--border)" strokeWidth="10" />
           <motion.circle
             cx="60" cy="60" r="45" fill="none" stroke={color} strokeWidth="10" strokeLinecap="round"
             strokeDasharray={circumference}
@@ -83,12 +83,12 @@ function RiskGauge({ score }: { score: number }) {
 
 function FundFlowDiagram() {
   const nodes = [
-    { id: "user", label: "User", x: 50, y: 60, color: "#89CFF0" },
-    { id: "router", label: "Router", x: 200, y: 60, color: "#89CFF0" },
-    { id: "poolA", label: "Pool A", x: 350, y: 20, color: "#A67B5B" },
-    { id: "poolB", label: "Pool B", x: 350, y: 100, color: "#A67B5B" },
-    { id: "treasury", label: "Treasury", x: 500, y: 20, color: "#D4A054" },
-    { id: "lp", label: "LP Holders", x: 500, y: 100, color: "#228B22" },
+    { id: "user", label: "User", x: 50, y: 60, color: "var(--primary)" },
+    { id: "router", label: "Router", x: 200, y: 60, color: "var(--primary)" },
+    { id: "poolA", label: "Pool A", x: 350, y: 20, color: "var(--accent)" },
+    { id: "poolB", label: "Pool B", x: 350, y: 100, color: "var(--accent)" },
+    { id: "treasury", label: "Treasury", x: 500, y: 20, color: "var(--warning)" },
+    { id: "lp", label: "LP Holders", x: 500, y: 100, color: "var(--success)" },
   ]
 
   const edges = [
@@ -105,7 +105,7 @@ function FundFlowDiagram() {
     <svg viewBox="0 0 560 140" className="w-full h-auto">
       <defs>
         <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-          <polygon points="0 0, 8 3, 0 6" fill="#7C9A8E" />
+          <polygon points="0 0, 8 3, 0 6" fill="var(--muted-foreground)" />
         </marker>
       </defs>
       {edges.map((edge, i) => {
@@ -117,18 +117,18 @@ function FundFlowDiagram() {
           <g key={i}>
             <motion.line
               x1={from.x + 35} y1={from.y} x2={to.x - 35} y2={to.y}
-              stroke="#1F3D2B" strokeWidth="1.5" markerEnd="url(#arrowhead)"
+              stroke="var(--border)" strokeWidth="1.5" markerEnd="url(#arrowhead)"
               initial={{ pathLength: 0, opacity: 0 }}
               animate={{ pathLength: 1, opacity: 1 }}
               transition={{ delay: 0.5 + i * 0.15, duration: 0.5 }}
             />
-            <text x={midX} y={midY - 6} textAnchor="middle" fill="#7C9A8E" fontSize="8" fontFamily="monospace">{edge.label}</text>
+            <text x={midX} y={midY - 6} textAnchor="middle" fill="var(--muted-foreground)" fontSize="8" fontFamily="monospace">{edge.label}</text>
           </g>
         )
       })}
       {nodes.map((node, i) => (
         <motion.g key={node.id} initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }}>
-          <rect x={node.x - 32} y={node.y - 14} width="64" height="28" rx="6" fill="#132419" stroke={node.color} strokeWidth="1" opacity="0.8" />
+          <rect x={node.x - 32} y={node.y - 14} width="64" height="28" rx="6" fill="var(--sidebar)" stroke={node.color} strokeWidth="1" opacity="0.8" />
           <text x={node.x} y={node.y + 4} textAnchor="middle" fill={node.color} fontSize="9" fontFamily="monospace">{node.label}</text>
         </motion.g>
       ))}
@@ -345,7 +345,7 @@ export default function BlockchainSecurityPage() {
                   <p className="text-sm text-muted-foreground max-w-md mx-auto mb-4">
                     Mathematical proofs that your contract satisfies its specification. Verifies invariants, pre/post conditions, and safety properties.
                   </p>
-                  <pre className="bg-[#0B1410] border border-border rounded-lg p-4 text-left text-xs font-mono text-foreground mx-auto max-w-lg mb-4 overflow-x-auto">
+                  <pre className="bg-sidebar border border-border rounded-lg p-4 text-left text-xs font-mono text-foreground mx-auto max-w-lg mb-4 overflow-x-auto">
 {`// Formal Specification (Hoare Logic)
 // Pre:  balances[msg.sender] >= amount
 // Post: balances[msg.sender] == old(balances[msg.sender]) - amount

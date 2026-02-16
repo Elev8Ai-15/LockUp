@@ -1,5 +1,3 @@
-/* Next steps: Connect to Temporal backend for real agents + DAST integration */
-
 export const stats = {
   totalScans: 1247,
   vulnsFixed: 892,
@@ -43,6 +41,8 @@ export interface Asset {
   connected: boolean
   shadowAI?: number
   stars?: number
+  crawlDepth?: string
+  endpoints?: string
 }
 
 export const assets: Asset[] = [
@@ -50,14 +50,14 @@ export const assets: Asset[] = [
   { id: "2", name: "vault-contracts", type: "SmartContract", language: "Solidity", lastScan: "5 min ago", securityScore: 78, connected: true, stars: 342 },
   { id: "3", name: "ai-agent-service", type: "Repo", language: "Python", lastScan: "Running...", securityScore: 88, connected: true, shadowAI: 47, stars: 67 },
   { id: "4", name: "defi-protocol", type: "SmartContract", language: "Solidity", lastScan: "12 min ago", securityScore: 82, connected: true },
-  { id: "5", name: "yoursite.com", type: "Website", language: "HTML/JS/CSS", lastScan: "30 min ago", securityScore: 91, connected: true },
-  { id: "6", name: "app.example.com", type: "WebApp", language: "React Native", lastScan: "1 hr ago", securityScore: 87, connected: true, shadowAI: 23 },
+  { id: "5", name: "yoursite.com", type: "Website", language: "HTML/JS/CSS", lastScan: "30 min ago", securityScore: 91, connected: true, crawlDepth: "87 pages", endpoints: "142" },
+  { id: "6", name: "app.example.com", type: "WebApp", language: "React Native", lastScan: "1 hr ago", securityScore: 87, connected: true, shadowAI: 23, crawlDepth: "34 routes", endpoints: "89" },
   { id: "7", name: "nft-marketplace", type: "SmartContract", language: "TypeScript", lastScan: "25 min ago", securityScore: 71, connected: true },
   { id: "8", name: "token-bridge", type: "SmartContract", language: "Rust", lastScan: "Never", securityScore: 0, connected: false },
   { id: "9", name: "chatbot-ui", type: "Repo", language: "TypeScript", lastScan: "3 hrs ago", securityScore: 87, connected: true, shadowAI: 35 },
-  { id: "10", name: "store.brand.io", type: "Website", language: "Next.js", lastScan: "45 min ago", securityScore: 96, connected: true },
-  { id: "11", name: "mobile-banking-app", type: "WebApp", language: "Flutter", lastScan: "2 hrs ago", securityScore: 83, connected: true, shadowAI: 8 },
-  { id: "12", name: "admin-dashboard", type: "WebApp", language: "Vue.js", lastScan: "4 hrs ago", securityScore: 90, connected: true },
+  { id: "10", name: "store.brand.io", type: "Website", language: "Next.js", lastScan: "45 min ago", securityScore: 96, connected: true, crawlDepth: "124 pages", endpoints: "203" },
+  { id: "11", name: "mobile-banking-app", type: "WebApp", language: "Flutter", lastScan: "2 hrs ago", securityScore: 83, connected: true, shadowAI: 8, crawlDepth: "18 routes", endpoints: "56" },
+  { id: "12", name: "admin-dashboard", type: "WebApp", language: "Vue.js", lastScan: "4 hrs ago", securityScore: 90, connected: true, crawlDepth: "42 routes", endpoints: "115" },
 ]
 
 export interface ActiveScan {

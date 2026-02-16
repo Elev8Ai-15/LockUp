@@ -49,6 +49,7 @@ export function AppSidebar() {
             width={28}
             height={28}
             className="rounded shrink-0"
+            priority
           />
           <span className="font-mono text-lg font-bold tracking-tight text-foreground group-data-[collapsible=icon]:hidden">
             LockUp
@@ -89,6 +90,7 @@ export function AppSidebar() {
             width={80}
             height={80}
             className="rounded-lg opacity-80"
+            loading="eager"
           />
           <p className="text-[10px] text-muted-foreground leading-relaxed text-center">
             Powered by 28 OSS tools + 4 Agentic LLMs

@@ -38,15 +38,15 @@ export function SecurityTrendChart() {
                   <stop offset="95%" stopColor="#A67B5B" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1F3D2B" />
-              <XAxis dataKey="month" stroke="#7C9A8E" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis stroke="#7C9A8E" fontSize={12} tickLine={false} axisLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="month" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#132419",
-                  border: "1px solid #1F3D2B",
+                  backgroundColor: "var(--card)",
+                  border: "1px solid var(--border)",
                   borderRadius: "8px",
-                  color: "#E2E8F0",
+                  color: "var(--foreground)",
                 }}
               />
               <Area type="monotone" dataKey="code" stroke="#89CFF0" fill="url(#codeGrad)" strokeWidth={2} name="Code" />

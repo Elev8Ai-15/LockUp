@@ -174,7 +174,7 @@ export default function AgentsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="h-[240px] rounded-lg bg-[#0B1410] border border-border p-3">
+          <ScrollArea className="h-[240px] rounded-lg bg-sidebar border border-border p-3">
             <div className="flex flex-col gap-1 font-mono text-xs">
               {swarmLogs.length === 0 && (
                 <p className="text-muted-foreground">Click Deploy Swarm to see agents working in sequence...</p>
