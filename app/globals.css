@@ -129,6 +129,16 @@
   --color-baby-blue: #89CFF0;
   --color-warm-brown: #A67B5B;
   --color-forest-green: #228B22;
+  --color-primary-50: oklch(0.95 0.08 200);
+  --color-primary-500: #89CFF0;
+  --color-primary-600: #5AB4E0;
+  --color-primary-700: #3A9BC7;
+  --color-secondary-500: #A67B5B;
+  --color-secondary-600: #8C6648;
+  --color-accent-500: #228B22;
+  --color-accent-600: #1A6B1A;
+  --color-glow-blue: #89CFF0;
+  --color-glow-green: #228B22;
 }
 
 @layer base {
