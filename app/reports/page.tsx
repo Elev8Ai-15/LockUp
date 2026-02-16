@@ -364,7 +364,7 @@ export default function ReportsPage() {
 
                   {showAiChat && (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="border border-border rounded-lg overflow-hidden">
-                      <div className="bg-[#0B1410] px-3 py-2 border-b border-border flex items-center gap-2">
+                      <div className="bg-sidebar px-3 py-2 border-b border-border flex items-center gap-2">
                         <Bot className="h-3.5 w-3.5 text-primary" />
                         <span className="text-xs text-foreground font-medium">Security Agents Collaborating</span>
                       </div>
@@ -399,7 +399,7 @@ export default function ReportsPage() {
                                     </div>
                                   )}
                                   <div className="relative">
-                                    <pre className="bg-[#0B1410] border border-border rounded-md p-3 text-xs font-mono text-foreground overflow-x-auto whitespace-pre-wrap">
+                                    <pre className="bg-sidebar border border-border rounded-md p-3 text-xs font-mono text-foreground overflow-x-auto whitespace-pre-wrap">
                                       {msg.content}
                                     </pre>
                                     <Button
