@@ -373,18 +373,44 @@ export default function ReportsPage() {
                           {chatMessages.map((msg, idx) => (
                             <div key={idx}>
                               {msg.role === "code" ? (
-                                <div className="relative">
-                                  <pre className="bg-[#0B1410] border border-border rounded-md p-3 text-xs font-mono text-foreground overflow-x-auto whitespace-pre-wrap">
-                                    {msg.content}
-                                  </pre>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute top-2 right-2 h-6 w-6 text-muted-foreground hover:text-foreground"
-                                    onClick={() => handleCopy(msg.content)}
-                                  >
-                                    {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
-                                  </Button>
+                                <div className="flex flex-col gap-2">
+                                  {selected?.type === "Web" && (
+                                    <div className="bg-muted p-3 rounded-xl">
+                                      <p className="font-mono text-sm text-foreground">Fixed with Content-Security-Policy header + DOMPurify</p>
+                                      <pre className="mt-2 text-xs bg-background p-2.5 rounded font-mono text-muted-foreground">{"Content-Security-Policy: default-src 'self';"}</pre>
+                                    </div>
+                                  )}
+                                  {selected?.type === "Blockchain" && (
+                                    <div className="bg-muted p-3 rounded-xl">
+                                      <p className="font-mono text-sm text-foreground">Fixed with OpenZeppelin ReentrancyGuard + CEI pattern</p>
+                                      <pre className="mt-2 text-xs bg-background p-2.5 rounded font-mono text-muted-foreground">{"modifier nonReentrant { ... }"}</pre>
+                                    </div>
+                                  )}
+                                  {selected?.type === "App" && (
+                                    <div className="bg-muted p-3 rounded-xl">
+                                      <p className="font-mono text-sm text-foreground">Fixed with strict CORS origin whitelist + credentials policy</p>
+                                      <pre className="mt-2 text-xs bg-background p-2.5 rounded font-mono text-muted-foreground">{"origin: ['https://app.example.com']"}</pre>
+                                    </div>
+                                  )}
+                                  {selected?.type === "SAST" && (
+                                    <div className="bg-muted p-3 rounded-xl">
+                                      <p className="font-mono text-sm text-foreground">Fixed with parameterized queries + input validation</p>
+                                      <pre className="mt-2 text-xs bg-background p-2.5 rounded font-mono text-muted-foreground">{"db.query('SELECT * FROM users WHERE id = $1', [id])"}</pre>
+                                    </div>
+                                  )}
+                                  <div className="relative">
+                                    <pre className="bg-[#0B1410] border border-border rounded-md p-3 text-xs font-mono text-foreground overflow-x-auto whitespace-pre-wrap">
+                                      {msg.content}
+                                    </pre>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="absolute top-2 right-2 h-6 w-6 text-muted-foreground hover:text-foreground"
+                                      onClick={() => handleCopy(msg.content)}
+                                    >
+                                      {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
+                                    </Button>
+                                  </div>
                                 </div>
                               ) : (
                                 <div className="flex items-start gap-2">
