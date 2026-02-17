@@ -90,7 +90,7 @@ export function AppSidebar() {
             width={80}
             height={80}
             className="rounded-lg opacity-80"
-            loading="eager"
+            priority
           />
           <p className="text-[10px] text-muted-foreground leading-relaxed text-center">
             Powered by 28 OSS tools + 4 Agentic LLMs
