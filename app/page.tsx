@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import {
   Zap, Search, Globe, Smartphone, Code, Shield, Terminal,
@@ -54,18 +54,18 @@ interface CompletedScan {
 }
 
 /* ── findings database ──────────────────────────────────── */
-const findingsForTarget = (target: string): ScanFinding[] => {
+const findingsForTarget = (target: string, scanId: string): ScanFinding[] => {
   const t = target.toLowerCase()
   if (t.includes("0x") || t.includes("contract") || t.includes("sol")) {
     return [
       {
-        id: `F-${Date.now()}-1`, title: "Reentrancy in withdraw()", severity: "critical",
+        id: `${scanId}-f1`, title: "Reentrancy in withdraw()", severity: "critical",
         file: "contracts/Vault.sol", line: 89,
         description: "External call before state update allows reentrancy attack to drain funds.",
         fix: `// Before (vulnerable)\nfunction withdraw(uint256 amount) external {\n    require(balances[msg.sender] >= amount);\n    (bool success, ) = msg.sender.call{value: amount}("");\n    require(success);\n    balances[msg.sender] -= amount;\n}\n\n// After (secure) - Checks-Effects-Interactions + ReentrancyGuard\nimport "@openzeppelin/contracts/security/ReentrancyGuard.sol";\n\nfunction withdraw(uint256 amount) external nonReentrant {\n    require(balances[msg.sender] >= amount);\n    balances[msg.sender] -= amount;\n    (bool success, ) = msg.sender.call{value: amount}("");\n    require(success);\n}`,
       },
       {
-        id: `F-${Date.now()}-2`, title: "Missing access control on setFee()", severity: "high",
+        id: `${scanId}-f2`, title: "Missing access control on setFee()", severity: "high",
         file: "contracts/Governance.sol", line: 45,
         description: "The setFee() function lacks the onlyOwner modifier, allowing anyone to change protocol fees.",
         fix: `// Before (vulnerable)\nfunction setFee(uint256 newFee) external {\n    protocolFee = newFee;\n}\n\n// After (secure) - Add access control\nfunction setFee(uint256 newFee) external onlyOwner {\n    require(newFee <= MAX_FEE, "Fee too high");\n    protocolFee = newFee;\n    emit FeeUpdated(newFee);\n}`,
@@ -75,13 +75,13 @@ const findingsForTarget = (target: string): ScanFinding[] => {
   if (t.includes("github") || t.includes("repo") || t.includes("git")) {
     return [
       {
-        id: `F-${Date.now()}-1`, title: "Prototype pollution in lodash", severity: "high",
+        id: `${scanId}-f1`, title: "Prototype pollution in lodash", severity: "high",
         file: "package.json", line: 24,
         description: "lodash < 4.17.21 is vulnerable to prototype pollution via the merge function.",
         fix: `// Fix: Update lodash to safe version\n"lodash": "^4.17.21"\n\n// Or replace with native:\nconst config = { ...defaults, ...structuredClone(userInput) };`,
       },
       {
-        id: `F-${Date.now()}-2`, title: "Hardcoded API secret in source", severity: "critical",
+        id: `${scanId}-f2`, title: "Hardcoded API secret in source", severity: "critical",
         file: "src/config/api.ts", line: 8,
         description: "API secret key is hardcoded in source code and checked into version control.",
         fix: `// Before (vulnerable)\nconst API_SECRET = "sk-live-abc123def456";\n\n// After (secure) - Use environment variables\nconst API_SECRET = process.env.API_SECRET;\n\nif (!API_SECRET) {\n  throw new Error("API_SECRET env var is required");\n}\n\n// Add to .gitignore:\n.env\n.env.local`,
@@ -91,19 +91,19 @@ const findingsForTarget = (target: string): ScanFinding[] => {
   // Default: website scan
   return [
     {
-      id: `F-${Date.now()}-1`, title: "Reflected XSS on /search", severity: "critical",
+      id: `${scanId}-f1`, title: "Reflected XSS on /search", severity: "critical",
       file: "/search?q=", line: 0,
       description: "User input is reflected in the DOM without sanitization, allowing script injection.",
       fix: `// Before (vulnerable)\napp.get('/search', (req, res) => {\n  res.send(\`<h1>Results for: \${req.query.q}</h1>\`);\n});\n\n// After (secure) - Sanitize all user input\nimport DOMPurify from 'dompurify';\n\napp.get('/search', (req, res) => {\n  const safeQuery = DOMPurify.sanitize(req.query.q || '');\n  res.send(\`<h1>Results for: \${safeQuery}</h1>\`);\n});`,
     },
     {
-      id: `F-${Date.now()}-2`, title: "SQL Injection in search API", severity: "critical",
+      id: `${scanId}-f2`, title: "SQL Injection in search API", severity: "critical",
       file: "/api/search", line: 0,
       description: "Dynamic SQL query constructed from user input without parameterization.",
       fix: `// Before (vulnerable)\nconst results = await db.query(\n  \`SELECT * FROM products WHERE name LIKE '%\${userInput}%'\`\n);\n\n// After (secure) - Use parameterized queries\nconst results = await db.query(\n  'SELECT * FROM products WHERE name LIKE $1',\n  [\`%\${userInput}%\`]\n);`,
     },
     {
-      id: `F-${Date.now()}-3`, title: "Missing Content-Security-Policy", severity: "high",
+      id: `${scanId}-f3`, title: "Missing Content-Security-Policy", severity: "high",
       file: "server/middleware.ts", line: 1,
       description: "No Content-Security-Policy header set, making the site vulnerable to XSS and data injection.",
       fix: `// Add CSP middleware\napp.use((req, res, next) => {\n  res.setHeader(\n    'Content-Security-Policy',\n    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'"\n  );\n  next();\n});`,
@@ -137,6 +137,7 @@ export default function DashboardPage() {
   const [completedScans, setCompletedScans] = useState<CompletedScan[]>([])
   const [expandedResults, setExpandedResults] = useState<Record<string, boolean>>({})
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const completedIdsRef = useRef(new Set<string>())
 
   /* ── start a scan ──────────────────────────────────────── */
   const startScan = (scanType: string) => {
@@ -147,7 +148,7 @@ export default function DashboardPage() {
     }
 
     const newScan: RunScan = {
-      id: `scan-${Date.now()}`,
+      id: `scan-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       asset: target,
       scanType,
       progress: 0,
@@ -167,7 +168,7 @@ export default function DashboardPage() {
   const completeScan = useCallback((scan: RunScan) => {
     setCompletedScans((prev) => {
       if (prev.some((c) => c.id === scan.id)) return prev
-      const findings = findingsForTarget(scan.asset)
+      const findings = findingsForTarget(scan.asset, scan.id)
         const completed: CompletedScan = {
         id: scan.id,
         asset: scan.asset,
@@ -195,14 +196,13 @@ export default function DashboardPage() {
   /* ── progress ticker ───────────────────────────────────── */
   useEffect(() => {
     if (scans.length === 0) return
-    const completedIds = new Set<string>()
     const interval = setInterval(() => {
       setScans((prev) => {
         const stillRunning: RunScan[] = []
         const justFinished: RunScan[] = []
 
         for (const scan of prev) {
-          if (completedIds.has(scan.id)) continue
+          if (completedIdsRef.current.has(scan.id)) continue
           const newProgress = Math.min(scan.progress + 2.2, 100)
           let newStatus = scan.status
           const newLogs = [...scan.logs]
@@ -220,7 +220,7 @@ export default function DashboardPage() {
           const updated = { ...scan, progress: newProgress, status: newStatus, logs: newLogs }
 
           if (newProgress >= 100) {
-            completedIds.add(scan.id)
+            completedIdsRef.current.add(scan.id)
             justFinished.push(updated)
           } else {
             stillRunning.push(updated)
