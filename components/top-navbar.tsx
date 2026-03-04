@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { Search, Bell, ChevronDown, Crown, X } from "lucide-react"
-import { NewScanButton } from "@/components/new-scan-button"
+import { Search, Bell, ChevronDown, Crown, X, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -154,8 +153,21 @@ export function TopNavbar() {
       </div>
 
       <div className="flex items-center gap-2">
-        {/* New Scan button */}
-        <NewScanButton />
+        {/* New Scan -- navigates to landing and focuses input */}
+        <Button
+          size="sm"
+          className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
+          onClick={() => {
+            router.push("/")
+            setTimeout(() => {
+              const input = document.querySelector<HTMLInputElement>('input[placeholder*="yoursite"]')
+              input?.focus()
+            }, 100)
+          }}
+        >
+          <Zap className="h-4 w-4" />
+          <span className="hidden sm:inline">New Scan</span>
+        </Button>
 
         {/* Notifications popover */}
         <Popover>

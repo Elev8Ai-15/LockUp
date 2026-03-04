@@ -217,23 +217,23 @@
   animation: agent-think 1.5s ease-in-out infinite;
 }
 
-/* Scrollbar styling */
+/* Scrollbar styling -- themed for light and dark */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0F1A14;
+  background: var(--background);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1F3D2B;
+  background: var(--border);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #2D5A3D;
+  background: var(--muted-foreground);
 }
 
 /* Respect reduced motion preference */
