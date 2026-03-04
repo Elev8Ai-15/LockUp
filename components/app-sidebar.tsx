@@ -12,17 +12,22 @@ import {
   Bot,
   Activity,
   Settings,
+  CreditCard,
+  LogIn,
+  UserPlus,
 } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarFooter,
+  SidebarSeparator,
 } from "@/components/ui/sidebar"
 
 const navItems = [
@@ -34,6 +39,12 @@ const navItems = [
   { title: "Blockchain", href: "/blockchain", icon: Shield },
   { title: "Runtime", href: "/runtime", icon: Activity },
   { title: "Settings", href: "/settings", icon: Settings },
+]
+
+const accountItems = [
+  { title: "Pricing", href: "/pricing", icon: CreditCard },
+  { title: "Sign In", href: "/auth/login", icon: LogIn },
+  { title: "Register", href: "/auth/register", icon: UserPlus },
 ]
 
 export function AppSidebar() {
@@ -61,6 +72,36 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => {
+                const isActive = pathname === item.href
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      tooltip={item.title}
+                      className={isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}
+                    >
+                      <Link href={item.href}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-[10px] text-muted-foreground/60 uppercase tracking-wider px-2 group-data-[collapsible=icon]:hidden">
+            Account
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {accountItems.map((item) => {
                 const isActive = pathname === item.href
                 return (
                   <SidebarMenuItem key={item.title}>

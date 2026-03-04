@@ -1,12 +1,10 @@
 import type { Metadata, Viewport } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { GeistSans } from 'geist/font/sans'
+import { GeistMono } from 'geist/font/mono'
 import { Analytics } from '@vercel/analytics/next'
 import { ThemeProvider } from '@/components/theme-provider'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import './globals.css'
-
-const geistSans = Geist({ subsets: ["latin"], variable: "--font-geist-sans" })
-const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" })
 
 export const metadata: Metadata = {
   title: {
@@ -19,7 +17,7 @@ export const metadata: Metadata = {
   keywords: ['security', 'AI', 'SAST', 'DAST', 'blockchain', 'smart contracts', 'vulnerability scanning', 'agentic AI'],
   authors: [{ name: 'LockUp' }],
   robots: {
-    index: false,     // SaaS dashboard — do not index in search engines
+    index: false,
     follow: false,
     nocache: true,
   },
@@ -34,7 +32,6 @@ export const metadata: Metadata = {
     title: 'LockUp — Agentic AI Security',
     description: 'AI-powered security scanning for modern apps, websites, and smart contracts.',
   },
-  // Prevents the app from running in an iframe (defense-in-depth alongside CSP frame-ancestors)
   other: {
     'X-Frame-Options': 'DENY',
   },
@@ -52,8 +49,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased bg-background`} suppressHydrationWarning>
-        <a href="#main-content" className="skip-to-content sr-only focus:not-sr-only focus:absolute focus:z-[9999] focus:p-4 focus:bg-primary focus:text-primary-foreground">Skip to main content</a>
+      <body
+        className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased bg-background`}
+        suppressHydrationWarning
+      >
+        <a
+          href="#main-content"
+          className="skip-to-content sr-only focus:not-sr-only focus:absolute focus:z-[9999] focus:p-4 focus:bg-primary focus:text-primary-foreground"
+        >
+          Skip to main content
+        </a>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

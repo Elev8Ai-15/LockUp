@@ -56,10 +56,11 @@ export async function POST(req: Request): Promise<NextResponse> {
   }
 
   // 2. Parse and validate request body
-  const { data, error } = await parseBody(req, ScanRequestSchema)
-  if (error) {
-    return NextResponse.json({ error }, { status: 400, headers: rlHeaders })
+  const parsed = await parseBody(req, ScanRequestSchema)
+  if (parsed.error !== null) {
+    return NextResponse.json({ error: parsed.error }, { status: 400, headers: rlHeaders })
   }
+  const { data } = parsed
 
   // 3. Basic target sanitization — strip leading/trailing whitespace
   const target = data.target.trim()

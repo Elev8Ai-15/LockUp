@@ -53,10 +53,13 @@ const statusStyles: Record<string, string> = {
 }
 
 interface ChatMessage {
-  role: "triage" | "fix" | "validator" | "code"
+  role: "triage" | "fix" | "validator" | "code" | "ai"
   agent?: string
   content: string
 }
+
+const VALID_VULN_TYPES = ["SAST", "DAST", "SCA", "Web", "App", "Blockchain", "Shadow AI"] as const
+type ValidVulnType = typeof VALID_VULN_TYPES[number]
 
 const mockAgentChat: Record<string, ChatMessage[]> = {
   Blockchain: [
@@ -140,6 +143,7 @@ export default function ReportsPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [retesting, setRetesting] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [aiStreaming, setAiStreaming] = useState(false)
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -160,12 +164,63 @@ export default function ReportsPage() {
     setCopied(false)
   }
 
-  const startAiRemediation = () => {
-    if (!selected) return
+  const startAiRemediation = async () => {
+    if (!selected || aiStreaming) return
     setShowAiChat(true)
-    const key = selected.type in mockAgentChat ? selected.type : "default"
-    const messages = mockAgentChat[key as keyof typeof mockAgentChat] || mockAgentChat.default
-    setChatMessages(messages)
+    setAiStreaming(true)
+
+    // Show triage kickoff message immediately
+    const triageMsg: ChatMessage = {
+      role: "triage",
+      agent: "Triage Agent",
+      content: `Analyzing ${selected.title} (CVSS ${selected.cvss}) — routing to AI Security Analyst...`,
+    }
+    setChatMessages([triageMsg])
+
+    const vulnType = (VALID_VULN_TYPES as readonly string[]).includes(selected.type)
+      ? (selected.type as ValidVulnType)
+      : undefined
+
+    try {
+      const res = await fetch("/api/ai/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: selected.title,
+          description: selected.description,
+          vulnType,
+          cvss: selected.cvss,
+        }),
+      })
+
+      if (!res.ok) throw new Error(`API ${res.status}`)
+
+      // Append AI streaming message
+      const aiMsg: ChatMessage = { role: "ai", content: "" }
+      setChatMessages((prev) => [...prev, aiMsg])
+
+      const reader = res.body?.getReader()
+      const decoder = new TextDecoder()
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          const chunk = decoder.decode(value, { stream: true })
+          setChatMessages((prev) => {
+            const msgs = [...prev]
+            const last = msgs[msgs.length - 1]
+            if (last?.role === "ai") msgs[msgs.length - 1] = { ...last, content: last.content + chunk }
+            return msgs
+          })
+        }
+      }
+    } catch {
+      toast.error("AI analysis failed — using cached remediation")
+      const key = selected.type in mockAgentChat ? selected.type : "default"
+      setChatMessages(mockAgentChat[key as keyof typeof mockAgentChat] || mockAgentChat.default)
+    } finally {
+      setAiStreaming(false)
+    }
   }
 
   const handleRetest = () => {
@@ -330,9 +385,9 @@ export default function ReportsPage() {
                   </div>
 
                   <div className="flex gap-2 flex-wrap">
-                    <Button size="sm" className="flex-1 gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90" onClick={startAiRemediation}>
-                      <Bot className="h-3.5 w-3.5" />
-                      AI Remediation
+                    <Button size="sm" className="flex-1 gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90" onClick={startAiRemediation} disabled={aiStreaming}>
+                      {aiStreaming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bot className="h-3.5 w-3.5" />}
+                      {aiStreaming ? "Analyzing..." : "AI Remediation"}
                     </Button>
                     <TooltipProvider>
                       <Tooltip>
@@ -414,6 +469,19 @@ export default function ReportsPage() {
                                       {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
                                     </Button>
                                   </div>
+                                </div>
+                              ) : msg.role === "ai" ? (
+                                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Bot className="h-3.5 w-3.5 text-primary shrink-0" />
+                                    <span className="text-[10px] font-medium text-primary">AI Security Analyst (Claude Sonnet)</span>
+                                  </div>
+                                  <pre className="text-xs font-mono text-foreground/90 whitespace-pre-wrap leading-relaxed">
+                                    {msg.content}
+                                    {aiStreaming && idx === chatMessages.length - 1 && (
+                                      <span className="animate-pulse text-primary">▊</span>
+                                    )}
+                                  </pre>
                                 </div>
                               ) : (
                                 <div className="flex items-start gap-2">
