@@ -170,6 +170,7 @@ export interface Vulnerability {
   status: "open" | "fixed" | "ignored"
   description: string
   detectedAt: string
+  patchImportance: string
 }
 
 export const vulnerabilities: Vulnerability[] = [
@@ -179,12 +180,14 @@ export const vulnerabilities: Vulnerability[] = [
     asset: "vault-contracts", file: "contracts/Vault.sol", line: 89, cvss: 9.8, status: "open",
     description: "The withdraw() function makes an external call before updating contract state (CEI pattern violation), allowing an attacker to re-enter and drain funds.",
     detectedAt: "5 min ago",
+    patchImportance: "A single exploit transaction can drain 100% of contract funds in one block — projects have lost $60M+ to reentrancy attacks. Adding ReentrancyGuard + the CEI pattern is zero-cost and eliminates the entire attack surface permanently.",
   },
   {
     id: "VULN-008", title: "Missing access control on setFee()", severity: "high", type: "Blockchain",
     asset: "defi-protocol", file: "contracts/Governance.sol", line: 45, cvss: 8.6, status: "open",
     description: "setFee() lacks the onlyOwner modifier, allowing any address to change protocol fees to 100% and drain all liquidity.",
     detectedAt: "12 min ago",
+    patchImportance: "Any anonymous wallet can raise protocol fees to 100% in one transaction, instantly redirecting all pending user funds to the attacker. Adding a single access-control modifier closes this permanently before it is discovered by an on-chain scanner.",
   },
   // ── Web ─────────────────────────────────────────────────────────────────
   {
@@ -192,12 +195,14 @@ export const vulnerabilities: Vulnerability[] = [
     asset: "yoursite.com", file: "/search?q=", line: 0, cvss: 9.1, status: "open",
     description: "User input from query parameter is reflected in the DOM without sanitization, enabling script injection that steals session cookies and bypasses SameSite protections.",
     detectedAt: "3 min ago",
+    patchImportance: "One malicious link shared in any channel can silently hijack every user who clicks it, giving the attacker full account control without needing credentials. HTML-encoding the reflected value costs one line of code and eliminates mass account takeover risk.",
   },
   {
     id: "VULN-007", title: "Missing security headers (CSP, HSTS, X-Frame-Options)", severity: "medium", type: "Web",
     asset: "store.brand.io", file: "next.config.js", line: 5, cvss: 5.8, status: "open",
     description: "Missing Content-Security-Policy, Strict-Transport-Security, and X-Frame-Options expose the site to XSS, clickjacking, and SSL-stripping attacks.",
     detectedAt: "45 min ago",
+    patchImportance: "These three HTTP headers are free, deploy in under five minutes, and each eliminates an entire attack class. Without them, any injected script runs unconstrained and first-visit SSL-stripping attacks silently intercept user credentials.",
   },
   // ── DAST ────────────────────────────────────────────────────────────────
   {
@@ -205,12 +210,14 @@ export const vulnerabilities: Vulnerability[] = [
     asset: "yoursite.com", file: "/api/search", line: 0, cvss: 9.5, status: "open",
     description: "Dynamic SQL constructed from user input without parameterization. Confirmed blind time-based SQLi via DAST crawl — full database read/write possible.",
     detectedAt: "10 min ago",
+    patchImportance: "An attacker can read, modify, or delete your entire database with a single crafted HTTP request — exposing all user PII, payment data, and credentials. This triggers mandatory GDPR and PCI-DSS breach notification obligations with potential fines up to 4% of annual revenue.",
   },
   {
     id: "VULN-010", title: "Exposed debug/env endpoint", severity: "high", type: "DAST",
     asset: "app.example.com", file: "/debug/vars", line: 0, cvss: 7.8, status: "open",
     description: "Debug endpoint returns all environment variables including DATABASE_URL and API keys to unauthenticated requests — critical info disclosure in production.",
     detectedAt: "1 hr ago",
+    patchImportance: "Any internet scanner can harvest your production credentials in seconds — automated bots enumerate common debug paths constantly. Removing this route takes minutes; a resulting breach investigation takes months and costs orders of magnitude more.",
   },
   // ── App ─────────────────────────────────────────────────────────────────
   {
@@ -218,6 +225,7 @@ export const vulnerabilities: Vulnerability[] = [
     asset: "app.example.com", file: "server/cors.config.js", line: 12, cvss: 8.2, status: "open",
     description: "Access-Control-Allow-Origin: * combined with credentials: true violates the CORS spec and allows any attacker-controlled origin to make authenticated API requests.",
     detectedAt: "12 min ago",
+    patchImportance: "Every website your users visit becomes a potential attacker — malicious pages can silently read private data or trigger destructive actions using the user's own credentials. Restricting CORS to an explicit origin allowlist requires one config change and has zero user-visible impact.",
   },
   // ── SCA ─────────────────────────────────────────────────────────────────
   {
@@ -225,6 +233,7 @@ export const vulnerabilities: Vulnerability[] = [
     asset: "frontend-app", file: "package.json", line: 24, cvss: 7.5, status: "fixed",
     description: "lodash < 4.17.21 prototype pollution via merge(). Attacker-controlled input modifies Object.prototype, escalating to RCE in Node.js server-side contexts.",
     detectedAt: "2 hrs ago",
+    patchImportance: "Attackers can corrupt the shared JavaScript prototype, overriding toString, hasOwnProperty, and other base-object methods across your entire application — potentially enabling remote code execution on your Node.js servers. A single version bump to lodash 4.17.21+ closes this with no API changes.",
   },
   // ── SAST ────────────────────────────────────────────────────────────────
   {
@@ -232,6 +241,7 @@ export const vulnerabilities: Vulnerability[] = [
     asset: "chatbot-ui", file: "src/lib/api.ts", line: 5, cvss: 5.3, status: "open",
     description: "OpenAI API key hardcoded in source — present in git history. Any repository clone or accidental public exposure permanently leaks the credential.",
     detectedAt: "3 hrs ago",
+    patchImportance: "Automated scanners harvest API keys from public and private repositories within minutes of a push. The credential lives in git history forever — even after deletion, anyone with a prior clone retains it. Rotate the key now and move it to an environment variable to stop ongoing abuse.",
   },
   // ── Shadow AI ───────────────────────────────────────────────────────────
   {
@@ -239,6 +249,7 @@ export const vulnerabilities: Vulnerability[] = [
     asset: "chatbot-ui", file: "src/lib/auth.ts", line: 42, cvss: 6.5, status: "open",
     description: "AI-generated session token uses Math.random() — not a CSPRNG. Predictable tokens allow session hijacking. Detected as vibe-coded function at 92% confidence.",
     detectedAt: "1 hr ago",
+    patchImportance: "Session tokens from Math.random() can be reconstructed from a handful of observed values, letting an attacker forge any user's session without their password. Replacing it with crypto.randomBytes(32) is a one-line change that makes tokens cryptographically unguessable.",
   },
   // ── API Security (OWASP API Top 10 2023) ─────────────────────────────
   {
@@ -246,12 +257,14 @@ export const vulnerabilities: Vulnerability[] = [
     asset: "api-gateway", file: "/api/users/{id}/data", line: 0, cvss: 9.3, status: "open",
     description: "/api/users/:id does not verify resource ownership. Any authenticated user can access any other user's data by iterating IDs — the #1 OWASP API vulnerability.",
     detectedAt: "20 min ago",
+    patchImportance: "Any logged-in user can access every other account's private data by simply changing a number in the URL — no hacking tools required. This is the root cause of most reported API data breaches and violates GDPR data minimization principles by default.",
   },
   {
     id: "VULN-012", title: "GraphQL introspection + excessive data exposure", severity: "high", type: "API Security",
     asset: "api-gateway", file: "/graphql", line: 0, cvss: 7.5, status: "open",
     description: "GraphQL introspection enabled in production; passwordHash, internalNotes, and stripeCustomerId returned without field-level authorization guards.",
     detectedAt: "35 min ago",
+    patchImportance: "Introspection hands attackers a complete map of your API — every type, field, and relationship. Combined with unguarded sensitive fields, it enables targeted data extraction of password hashes and payment identifiers without any brute-force effort.",
   },
   // ── AI/LLM Security ──────────────────────────────────────────────────
   {
@@ -259,6 +272,7 @@ export const vulnerabilities: Vulnerability[] = [
     asset: "chatbot-ui", file: "/api/chat", line: 0, cvss: 9.0, status: "open",
     description: "User input is concatenated directly into the LLM system prompt. Attackers override system instructions, exfiltrate context window, or trigger policy-violating outputs.",
     detectedAt: "15 min ago",
+    patchImportance: "Attackers can override your AI's safety rules, leak confidential system prompts, and weaponize your assistant against your own users — destroying trust and violating your AI provider's terms of service. Separating user input into its own message turn closes the most common attack vector.",
   },
   // ── Supply Chain ────────────────────────────────────────────────────
   {
@@ -266,6 +280,7 @@ export const vulnerabilities: Vulnerability[] = [
     asset: "ml-pipeline", file: "requirements.txt", line: 0, cvss: 8.1, status: "open",
     description: "Private package names in requirements.txt are available on PyPI under the same name. A dependency confusion attack substitutes malicious code silently at install time.",
     detectedAt: "2 hrs ago",
+    patchImportance: "A malicious public package installs and executes attacker code with full build-environment permissions — including access to secrets, tokens, and production infrastructure — with no warning. Pinning packages to a private registry index is a one-line .npmrc/.pip.conf change.",
   },
   // ── Cloud/Infra ─────────────────────────────────────────────────────
   {
@@ -273,6 +288,7 @@ export const vulnerabilities: Vulnerability[] = [
     asset: "ai-agent-service", file: "src/tools/fetch.py", line: 23, cvss: 8.3, status: "open",
     description: "User-controlled URLs passed to requests.get() without allowlist validation. Attacker probes AWS metadata endpoint (169.254.169.254), internal APIs, and Redis via SSRF.",
     detectedAt: "40 min ago",
+    patchImportance: "Attackers use your own server as a proxy to extract AWS IAM credentials from the metadata endpoint, pivot into internal databases, and enumerate services never exposed to the internet — turning a fetch feature into a full infrastructure breach.",
   },
   // ── Cryptography ────────────────────────────────────────────────────
   {
@@ -280,6 +296,7 @@ export const vulnerabilities: Vulnerability[] = [
     asset: "admin-dashboard", file: "lib/auth/hash.js", line: 8, cvss: 9.2, status: "open",
     description: "Passwords hashed with MD5 with no salt. MD5 is not a password-hashing function — pre-computed rainbow tables crack all stored passwords offline in seconds.",
     detectedAt: "1 hr ago",
+    patchImportance: "A single database backup leak exposes every user's plaintext password in seconds using pre-computed tables downloadable online for free. Migrating to bcrypt (cost=12) makes each hash take ~250ms to crack instead of microseconds — a decisive practical difference.",
   },
 ]
 

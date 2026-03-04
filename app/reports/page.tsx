@@ -226,8 +226,12 @@ export default function ReportsPage() {
   const handleRetest = () => {
     setRetesting(true)
     setTimeout(() => {
-      setRetesting(false)
-      toast.success("Retest complete!", { description: "Vulnerability confirmed fixed in sandbox." })
+      try {
+        toast.success("Retest complete!", { description: "Vulnerability confirmed fixed in sandbox." })
+      } finally {
+        // Always clear the spinner — even if toast throws
+        setRetesting(false)
+      }
     }, 2500)
   }
 
@@ -382,6 +386,14 @@ export default function ReportsPage() {
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Description</p>
                     <p className="text-sm text-secondary-foreground leading-relaxed">{selected.description}</p>
+                  </div>
+
+                  <div className="rounded-lg border border-warning/30 bg-warning/5 p-3">
+                    <p className="text-[10px] font-semibold text-warning uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                      <AlertTriangle className="h-3 w-3" />
+                      Why this patch matters
+                    </p>
+                    <p className="text-xs text-foreground/80 leading-relaxed">{selected.patchImportance}</p>
                   </div>
 
                   <div className="flex gap-2 flex-wrap">

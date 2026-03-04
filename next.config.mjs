@@ -1,8 +1,8 @@
 /** @type {import('next').NextConfig} */
 
 const securityHeaders = [
-  // Prevent clickjacking attacks
-  { key: "X-Frame-Options", value: "DENY" },
+  // Allow same-origin framing for sandbox preview panels (IDE/Claude Code preview)
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
   // Stop browsers from sniffing MIME types
   { key: "X-Content-Type-Options", value: "nosniff" },
   // Control referrer information
@@ -32,7 +32,7 @@ const securityHeaders = [
       "img-src 'self' data: blob: https:",
       "font-src 'self' https://fonts.gstatic.com",
       "connect-src 'self' https://vitals.vercel-insights.com https://va.vercel-scripts.com",
-      "frame-ancestors 'none'",
+      "frame-ancestors 'self'",
       "base-uri 'self'",
       "form-action 'self'",
       "upgrade-insecure-requests",
