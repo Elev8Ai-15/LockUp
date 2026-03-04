@@ -165,36 +165,44 @@ export default function DashboardPage() {
 
   /* ── scan completion ───────────────────────────────────── */
   const completeScan = useCallback((scan: RunScan) => {
-    const findings = findingsForTarget(scan.asset)
-    const completed: CompletedScan = {
-      id: scan.id,
-      asset: scan.asset,
-      scanType: scan.scanType,
-      findings,
-      completedAt: new Date().toLocaleTimeString(),
-    }
-    setCompletedScans((prev) => [completed, ...prev])
+    setCompletedScans((prev) => {
+      if (prev.some((c) => c.id === scan.id)) return prev
+      const findings = findingsForTarget(scan.asset)
+        const completed: CompletedScan = {
+        id: scan.id,
+        asset: scan.asset,
+        scanType: scan.scanType,
+        findings,
+        completedAt: new Date().toLocaleTimeString(),
+      }
+
+      const critCount = findings.filter((f) => f.severity === "critical").length
+      const highCount = findings.filter((f) => f.severity === "high").length
+      if (critCount > 0) {
+        toast.error(`${scan.asset}: ${critCount} critical, ${highCount} high severity`, { duration: 6000 })
+      } else if (highCount > 0) {
+        toast.warning(`${scan.asset}: ${highCount} high severity findings`, { duration: 5000 })
+      } else {
+        toast.success(`${scan.asset}: No critical issues`, { duration: 4000 })
+      }
+
+      return [completed, ...prev]
+    })
     setScans((prev) => prev.filter((s) => s.id !== scan.id))
     setExpandedResults((prev) => ({ ...prev, [scan.id]: true }))
-
-    const critCount = findings.filter((f) => f.severity === "critical").length
-    const highCount = findings.filter((f) => f.severity === "high").length
-    if (critCount > 0) {
-      toast.error(`${scan.asset}: ${critCount} critical, ${highCount} high severity`, { duration: 6000 })
-    } else if (highCount > 0) {
-      toast.warning(`${scan.asset}: ${highCount} high severity findings`, { duration: 5000 })
-    } else {
-      toast.success(`${scan.asset}: No critical issues`, { duration: 4000 })
-    }
   }, [])
 
   /* ── progress ticker ───────────────────────────────────── */
   useEffect(() => {
     if (scans.length === 0) return
+    const completedIds = new Set<string>()
     const interval = setInterval(() => {
       setScans((prev) => {
-        const updated = prev.map((scan) => {
-          if (scan.progress >= 100) return scan
+        const stillRunning: RunScan[] = []
+        const justFinished: RunScan[] = []
+
+        for (const scan of prev) {
+          if (completedIds.has(scan.id)) continue
           const newProgress = Math.min(scan.progress + 2.2, 100)
           let newStatus = scan.status
           const newLogs = [...scan.logs]
@@ -208,14 +216,22 @@ export default function DashboardPage() {
           if (newProgress >= 95 && !newLogs.some((l) => l.includes("[DONE]"))) {
             newLogs.push("[DONE] Scan complete -- fix code ready")
           }
-          return { ...scan, progress: newProgress, status: newStatus, logs: newLogs }
-        })
 
-        const justDone = updated.filter((s) => s.progress >= 100 && s.status !== "completed")
-        justDone.forEach((s) => {
+          const updated = { ...scan, progress: newProgress, status: newStatus, logs: newLogs }
+
+          if (newProgress >= 100) {
+            completedIds.add(scan.id)
+            justFinished.push(updated)
+          } else {
+            stillRunning.push(updated)
+          }
+        }
+
+        justFinished.forEach((s) => {
           setTimeout(() => completeScan(s), 400)
         })
-        return updated.filter((s) => s.progress < 100)
+
+        return stillRunning
       })
     }, 800)
     return () => clearInterval(interval)
