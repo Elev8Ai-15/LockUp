@@ -88,10 +88,14 @@ export function rateLimit(
  * Compatible with the IETF draft-ietf-httpapi-ratelimit-headers spec.
  */
 export function rateLimitHeaders(result: RateLimitResult, limit: number): HeadersInit {
-  return {
+  const headers: Record<string, string> = {
     "RateLimit-Limit": String(limit),
     "RateLimit-Remaining": String(result.remaining),
     "RateLimit-Reset": String(Math.ceil(result.resetAt / 1000)),
-    "Retry-After": result.success ? "0" : String(Math.ceil((result.resetAt - Date.now()) / 1000)),
   }
+  // Retry-After is only meaningful on 429 responses (RFC 7231 §7.1.3)
+  if (!result.success) {
+    headers["Retry-After"] = String(Math.ceil((result.resetAt - Date.now()) / 1000))
+  }
+  return headers
 }

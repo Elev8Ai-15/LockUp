@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useRef } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import {
   Zap, Search, Globe, Smartphone, Code, Shield, Terminal,
@@ -398,6 +398,14 @@ export default function DashboardPage() {
   // EventSource instances keyed by scan ID for cleanup
   const esMapRef = useRef(new Map<string, EventSource>())
 
+  // Close all open EventSources when the component unmounts
+  useEffect(() => {
+    return () => {
+      esMapRef.current.forEach((es) => es.close())
+      esMapRef.current.clear()
+    }
+  }, [])
+
   /* ── start a scan — wired to SSE stream ───────────────── */
   const startScan = (scanType: string) => {
     const target = url.trim()
@@ -427,28 +435,34 @@ export default function DashboardPage() {
     esMapRef.current.set(id, es)
 
     es.addEventListener("log", (e) => {
-      const data = JSON.parse(e.data) as { message: string; pct: number }
-      setScans((prev) =>
-        prev.map((s) =>
-          s.id !== id ? s : {
-            ...s,
-            logs: s.logs.includes(data.message) ? s.logs : [...s.logs, data.message],
-          }
+      try {
+        const data = JSON.parse(e.data) as { message: string; pct: number }
+        if (typeof data.message !== "string") return
+        setScans((prev) =>
+          prev.map((s) =>
+            s.id !== id ? s : {
+              ...s,
+              logs: s.logs.includes(data.message) ? s.logs : [...s.logs, data.message],
+            }
+          )
         )
-      )
+      } catch { /* ignore malformed SSE frame */ }
     })
 
     es.addEventListener("progress", (e) => {
-      const data = JSON.parse(e.data) as { pct: number }
-      setScans((prev) =>
-        prev.map((s) =>
-          s.id !== id ? s : {
-            ...s,
-            progress: data.pct,
-            status: data.pct >= 80 ? "reporting" : data.pct >= 50 ? "analyzing" : "scanning",
-          }
+      try {
+        const data = JSON.parse(e.data) as { pct: number }
+        if (typeof data.pct !== "number") return
+        setScans((prev) =>
+          prev.map((s) =>
+            s.id !== id ? s : {
+              ...s,
+              progress: data.pct,
+              status: data.pct >= 80 ? "reporting" : data.pct >= 50 ? "analyzing" : "scanning",
+            }
+          )
         )
-      )
+      } catch { /* ignore malformed SSE frame */ }
     })
 
     es.addEventListener("complete", () => {

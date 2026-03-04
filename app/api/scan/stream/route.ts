@@ -114,6 +114,10 @@ export async function GET(req: Request): Promise<Response> {
     return NextResponse.json({ error: "Missing ?target= parameter" }, { status: 400 })
   }
 
+  if (target.length > 500) {
+    return NextResponse.json({ error: "Target parameter too long" }, { status: 400 })
+  }
+
   const phases = phasesForTarget(target, scanType)
   const encoder = new TextEncoder()
 

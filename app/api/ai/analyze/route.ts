@@ -215,12 +215,18 @@ export async function POST(req: Request): Promise<Response> {
   }
 }
 
-export async function OPTIONS(): Promise<NextResponse> {
+export async function OPTIONS(req: Request): Promise<NextResponse> {
+  const origin = req.headers.get("origin") ?? ""
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+  const allowedOrigin = origin === appUrl ? origin : appUrl
+
   return new NextResponse(null, {
     status: 204,
     headers: {
+      "Access-Control-Allow-Origin": allowedOrigin,
       "Access-Control-Allow-Methods": "POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Vary": "Origin",
     },
   })
 }
