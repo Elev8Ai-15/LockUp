@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import {
   Zap, Search, Globe, Smartphone, Code, Shield, Terminal,
@@ -137,6 +137,8 @@ export default function DashboardPage() {
   const [completedScans, setCompletedScans] = useState<CompletedScan[]>([])
   const [expandedResults, setExpandedResults] = useState<Record<string, boolean>>({})
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  // Tracks IDs mid-completion to prevent double-firing across effect restarts
+  const completedIdsRef = useRef(new Set<string>())
 
   /* ── start a scan ──────────────────────────────────────── */
   const startScan = (scanType: string) => {
@@ -195,14 +197,14 @@ export default function DashboardPage() {
   /* ── progress ticker ───────────────────────────────────── */
   useEffect(() => {
     if (scans.length === 0) return
-    const completedIds = new Set<string>()
     const interval = setInterval(() => {
       setScans((prev) => {
         const stillRunning: RunScan[] = []
         const justFinished: RunScan[] = []
 
         for (const scan of prev) {
-          if (completedIds.has(scan.id)) continue
+          // Use stable ref so guard survives effect restarts
+          if (completedIdsRef.current.has(scan.id)) continue
           const newProgress = Math.min(scan.progress + 2.2, 100)
           let newStatus = scan.status
           const newLogs = [...scan.logs]
@@ -220,7 +222,7 @@ export default function DashboardPage() {
           const updated = { ...scan, progress: newProgress, status: newStatus, logs: newLogs }
 
           if (newProgress >= 100) {
-            completedIds.add(scan.id)
+            completedIdsRef.current.add(scan.id)
             justFinished.push(updated)
           } else {
             stillRunning.push(updated)
@@ -237,11 +239,15 @@ export default function DashboardPage() {
     return () => clearInterval(interval)
   }, [scans.length, completeScan])
 
-  const copyCode = (code: string, id: string) => {
-    navigator.clipboard.writeText(code)
-    setCopiedId(id)
-    toast.success("Fix code copied to clipboard")
-    setTimeout(() => setCopiedId(null), 2000)
+  const copyCode = async (code: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(code)
+      setCopiedId(id)
+      toast.success("Fix code copied to clipboard")
+      setTimeout(() => setCopiedId(null), 2000)
+    } catch {
+      toast.error("Failed to copy — please select and copy manually")
+    }
   }
 
   const totalFindings = completedScans.reduce((a, s) => a + s.findings.length, 0)

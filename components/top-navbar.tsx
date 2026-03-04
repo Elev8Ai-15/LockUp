@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Search, Bell, ChevronDown, Crown, X } from "lucide-react"
 import { NewScanButton } from "@/components/new-scan-button"
@@ -69,12 +69,15 @@ export function TopNavbar() {
 
   const unreadCount = notifications.filter((n) => !n.read).length
 
-  const filteredResults = searchQuery.trim().length > 0
-    ? searchablePages.filter((page) => {
-        const q = searchQuery.toLowerCase()
-        return page.label.toLowerCase().includes(q) || page.keywords.some((k) => k.includes(q))
-      })
-    : []
+  const filteredResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return []
+    return searchablePages.filter(
+      (page) =>
+        page.label.toLowerCase().includes(q) ||
+        page.keywords.some((k) => k.includes(q))
+    )
+  }, [searchQuery])
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {

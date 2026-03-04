@@ -9,9 +9,35 @@ const geistSans = Geist({ subsets: ["latin"], variable: "--font-geist-sans" })
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" })
 
 export const metadata: Metadata = {
-  title: 'LockUp - Agentic AI Security for Vibe-Coded Apps',
+  title: {
+    default: 'LockUp — Agentic AI Security',
+    template: '%s | LockUp',
+  },
   description: 'The agentic AI security platform for vibe-coded apps, websites, web/mobile apps, and blockchain smart contracts. Powered by 28 OSS tools + 4 Agentic LLMs.',
   generator: 'LockUp',
+  applicationName: 'LockUp',
+  keywords: ['security', 'AI', 'SAST', 'DAST', 'blockchain', 'smart contracts', 'vulnerability scanning', 'agentic AI'],
+  authors: [{ name: 'LockUp' }],
+  robots: {
+    index: false,     // SaaS dashboard — do not index in search engines
+    follow: false,
+    nocache: true,
+  },
+  openGraph: {
+    type: 'website',
+    title: 'LockUp — Agentic AI Security',
+    description: 'AI-powered security scanning for modern apps, websites, and smart contracts.',
+    siteName: 'LockUp',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'LockUp — Agentic AI Security',
+    description: 'AI-powered security scanning for modern apps, websites, and smart contracts.',
+  },
+  // Prevents the app from running in an iframe (defense-in-depth alongside CSP frame-ancestors)
+  other: {
+    'X-Frame-Options': 'DENY',
+  },
 }
 
 export const viewport: Viewport = {

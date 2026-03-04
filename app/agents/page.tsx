@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion } from "motion/react"
 import { Bot, Zap, Terminal, Sliders, Plus, Play, Loader2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -41,8 +41,21 @@ export default function AgentsPage() {
   const [agentSettings, setAgentSettings] = useState(
     agents.map((a) => ({ ...a, aggressiveness: 60, creativity: 40 }))
   )
+  // Track pending timers so they can be cleared on unmount
+  const timerIdsRef = useRef<ReturnType<typeof setTimeout>[]>([])
+
+  // Cleanup all pending timers when the component unmounts
+  useEffect(() => {
+    return () => {
+      timerIdsRef.current.forEach(clearTimeout)
+    }
+  }, [])
 
   const deploySwarm = () => {
+    // Cancel any in-flight timers before starting a new run
+    timerIdsRef.current.forEach(clearTimeout)
+    timerIdsRef.current = []
+
     setDeploying(true)
     setSwarmLogs([])
     const logs = [
@@ -59,13 +72,14 @@ export default function AgentsPage() {
     ]
 
     logs.forEach((log, i) => {
-      setTimeout(() => {
+      const id = setTimeout(() => {
         setSwarmLogs((prev) => [...prev, log])
         if (i === logs.length - 1) {
           setDeploying(false)
           toast.success("Swarm deployment complete!", { description: "3 vulnerabilities fixed, 0 regressions." })
         }
       }, (i + 1) * 800)
+      timerIdsRef.current.push(id)
     })
   }
 

@@ -16,8 +16,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files
+# env files — allow the example template, block all real env files
 .env*
+!.env.example
 
 # vercel
 .vercel

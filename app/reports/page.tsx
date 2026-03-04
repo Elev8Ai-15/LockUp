@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import {
   Search,
@@ -141,14 +141,17 @@ export default function ReportsPage() {
   const [retesting, setRetesting] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  const filtered = vulnerabilities.filter((v) => {
-    const matchesSeverity = severityFilter === "all" || v.severity === severityFilter
-    const matchesType = typeFilter === "all" || v.type === typeFilter
-    const matchesSearch =
-      v.title.toLowerCase().includes(search.toLowerCase()) ||
-      v.asset.toLowerCase().includes(search.toLowerCase())
-    return matchesSeverity && matchesType && matchesSearch
-  })
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase()
+    return vulnerabilities.filter((v) => {
+      const matchesSeverity = severityFilter === "all" || v.severity === severityFilter
+      const matchesType = typeFilter === "all" || v.type === typeFilter
+      const matchesSearch =
+        v.title.toLowerCase().includes(q) ||
+        v.asset.toLowerCase().includes(q)
+      return matchesSeverity && matchesType && matchesSearch
+    })
+  }, [search, severityFilter, typeFilter])
 
   const openVuln = (vuln: Vulnerability) => {
     setSelected(vuln)
