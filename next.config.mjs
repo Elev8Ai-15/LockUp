@@ -46,6 +46,11 @@ const nextConfig = {
     unoptimized: process.env.NODE_ENV !== "production",
   },
   serverExternalPackages: [],
+  experimental: {
+    // Next.js 16 enables React Compiler by default — opt out until
+    // babel-plugin-react-compiler is explicitly added to the project
+    reactCompiler: false,
+  },
 
   async headers() {
     return [
