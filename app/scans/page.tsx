@@ -200,8 +200,14 @@ export default function ScansPage() {
       // Move to completed after delay
       setTimeout(() => {
         setActiveScans(prev => prev.filter(s => s.id !== scanId))
-        setCompletedScans(prev => [result, ...prev])
-        setExpandedResults(prev => ({ ...prev, [result.id]: true }))
+        // Use the local scanId to guarantee uniqueness (API id might clash)
+        const uniqueResult = { ...result, id: scanId }
+        setCompletedScans(prev => {
+          // Prevent duplicates from strict mode double-renders
+          if (prev.some(s => s.id === scanId)) return prev
+          return [uniqueResult, ...prev]
+        })
+        setExpandedResults(prev => ({ ...prev, [scanId]: true }))
         setActiveTab("results")
         
         const { critical = 0, high = 0 } = result.summary || {}
