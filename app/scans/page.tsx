@@ -442,7 +442,7 @@ const scanIdRef = useRef(0)
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {activeScans.map((scan, i) => (
                 <motion.div
-                  key={scan.id}
+                  key={`${scan.id}-${i}`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
