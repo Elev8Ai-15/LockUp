@@ -113,11 +113,12 @@ export default function ScansPage() {
   const [expandedResults, setExpandedResults] = useState<Record<string, boolean>>({})
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [isScanning, setIsScanning] = useState(false)
-  const scanIdRef = useRef(0)
-
+const scanIdRef = useRef(0)
+  
   /* ── Start a real scan ────────────────────────────────────── */
   const startRealScan = useCallback(async (target: string, type: ScanType) => {
-    const scanId = `scan-${++scanIdRef.current}-${Date.now()}`
+    // Generate a truly unique ID using counter + timestamp + random suffix
+    const scanId = `scan-${++scanIdRef.current}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     const checks = scanChecks[type].map(c => ({ ...c, status: "pending" as const }))
     
     const newScan: ActiveScan = {
@@ -441,7 +442,7 @@ export default function ScansPage() {
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {activeScans.map((scan, i) => (
                 <motion.div
-                  key={scan.id}
+                  key={`${scan.id}-${i}`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
@@ -528,13 +529,13 @@ export default function ScansPage() {
             </Card>
           ) : (
             <div className="flex flex-col gap-4">
-              {completedScans.map((result, i) => (
-                <motion.div
-                  key={result.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                >
+            {completedScans.map((result, i) => (
+              <motion.div
+                key={`${result.id}-${i}`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+              >
                   <Card className="bg-card border-border overflow-hidden">
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">

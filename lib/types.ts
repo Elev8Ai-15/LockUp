@@ -20,7 +20,7 @@ export type ScanType = "website" | "repo" | "contract" | "api"
 
 export type AssetType = "Website" | "Repo" | "WebApp" | "SmartContract" | "API"
 
-export type VulnType = "SAST" | "DAST" | "SCA" | "Web" | "App" | "Blockchain" | "API" | "Config"
+export type VulnType = "SAST" | "DAST" | "SCA" | "Web" | "App" | "Blockchain" | "API" | "Config" | "Shadow AI"
 
 export interface RemediationStep {
   title: string
