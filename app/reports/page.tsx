@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import {
   Search,
@@ -8,17 +8,25 @@ import {
   AlertTriangle,
   GitPullRequest,
   Bot,
-  Send,
   Globe,
-  FlaskConical,
   Loader2,
   Copy,
   Check,
+  Download,
+  FileText,
+  Shield,
+  CheckCircle2,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  Printer,
+  BarChart3,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Select,
   SelectContent,
@@ -36,14 +44,19 @@ import {
 } from "@/components/ui/table"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { vulnerabilities, type Vulnerability, type Severity } from "@/lib/mock-data"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Progress } from "@/components/ui/progress"
+import { vulnerabilities, type Vulnerability } from "@/lib/mock-data"
+import type { Finding, Severity, OWASPCategory } from "@/lib/types"
 import { toast } from "sonner"
 
+/* ── Styling Maps ───────────────────────────────────────────── */
 const severityStyles: Record<Severity, string> = {
   critical: "bg-destructive/15 text-destructive border-destructive/30",
   high: "bg-warning/15 text-warning border-warning/30",
   medium: "bg-primary/15 text-primary border-primary/30",
   low: "bg-muted text-muted-foreground border-border",
+  info: "bg-muted text-muted-foreground border-border",
 }
 
 const statusStyles: Record<string, string> = {
@@ -52,407 +65,550 @@ const statusStyles: Record<string, string> = {
   ignored: "bg-muted text-muted-foreground border-border",
 }
 
-interface ChatMessage {
-  role: "triage" | "fix" | "validator" | "code"
-  agent?: string
-  content: string
+/* ── Convert legacy vulns to new Finding type ───────────────── */
+function vulnToFinding(vuln: Vulnerability): Finding {
+  return {
+    id: vuln.id,
+    title: vuln.title,
+    severity: vuln.severity as Severity,
+    cvss: vuln.cvss,
+    owasp: getOWASPFromType(vuln.type),
+    type: vuln.type,
+    description: vuln.description,
+    impact: "Review the finding details for potential business impact.",
+    location: `${vuln.asset}/${vuln.file}${vuln.line > 0 ? `:${vuln.line}` : ""}`,
+    remediation: {
+      title: "Apply recommended fix",
+      description: "See detailed remediation guidance in the finding panel.",
+    },
+    detectedAt: vuln.detectedAt,
+    status: vuln.status as "open" | "fixed" | "ignored",
+  }
 }
 
-const mockAgentChat: Record<string, ChatMessage[]> = {
-  Blockchain: [
-    { role: "triage", agent: "Triage Agent", content: "High risk detected. Reentrancy in withdraw() allows fund drainage. Priority: CRITICAL." },
-    { role: "fix", agent: "Fix Agent", content: "Generating fix using OpenZeppelin ReentrancyGuard pattern..." },
-    { role: "code", content: `// BEFORE (vulnerable)
-function withdraw(uint256 amount) external {
-    require(balances[msg.sender] >= amount);
-    (bool success, ) = msg.sender.call{value: amount}("");
-    require(success);
-    balances[msg.sender] -= amount;
+function getOWASPFromType(type: string): OWASPCategory {
+  const mapping: Record<string, OWASPCategory> = {
+    "Blockchain": "A04:2021-Insecure Design",
+    "Web": "A03:2021-Injection",
+    "App": "A01:2021-Broken Access Control",
+    "SAST": "A03:2021-Injection",
+    "DAST": "A05:2021-Security Misconfiguration",
+    "SCA": "A06:2021-Vulnerable Components",
+    "Shadow AI": "A04:2021-Insecure Design",
+  }
+  return mapping[type] || "A05:2021-Security Misconfiguration"
 }
 
-// AFTER (fixed with ReentrancyGuard)
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+/* ── Print Styles ───────────────────────────────────────────── */
+const printStyles = `
+  @media print {
+    body * {
+      visibility: hidden;
+    }
+    #print-report, #print-report * {
+      visibility: visible;
+    }
+    #print-report {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      padding: 20px;
+    }
+    .no-print {
+      display: none !important;
+    }
+    .print-break {
+      page-break-before: always;
+    }
+  }
+`
 
-function withdraw(uint256 amount) external nonReentrant {
-    require(balances[msg.sender] >= amount);
-    balances[msg.sender] -= amount; // State update BEFORE call
-    (bool success, ) = msg.sender.call{value: amount}("");
-    require(success);
-    emit Withdrawn(msg.sender, amount);
-}` },
-    { role: "validator", agent: "Validator Agent", content: "All 12 tests passed. Reentrancy attack vector eliminated. Gas impact: +2,100 gas per call." },
-  ],
-  Web: [
-    { role: "triage", agent: "Triage Agent", content: "High risk on website. Reflected XSS allows script injection via search parameter." },
-    { role: "fix", agent: "Fix Agent", content: "Generating secure headers and input sanitization..." },
-    { role: "code", content: `// Secure headers middleware (next.config.js)
-const securityHeaders = [
-  { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self'" },
-  { key: 'X-XSS-Protection', value: '1; mode=block' },
-  { key: 'X-Content-Type-Options', value: 'nosniff' },
-];
-
-// Input sanitization
-import DOMPurify from 'dompurify';
-const sanitized = DOMPurify.sanitize(userInput);` },
-    { role: "validator", agent: "Validator Agent", content: "Tests passed. XSS vector neutralized. CSP headers applied." },
-  ],
-  App: [
-    { role: "triage", agent: "Triage Agent", content: "Insecure CORS policy on app API allows cross-origin data theft." },
-    { role: "fix", agent: "Fix Agent", content: "Generating CORS fix..." },
-    { role: "code", content: `// BEFORE (vulnerable)
-app.use(cors({ origin: '*' }));
-
-// AFTER (fixed CORS)
-app.use(cors({
-  origin: ['https://app.example.com'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-}));` },
-    { role: "validator", agent: "Validator Agent", content: "Tests passed. CORS properly restricted to allowed origins." },
-  ],
-  default: [
-    { role: "triage", agent: "Triage Agent", content: "Analyzing vulnerability and assessing risk..." },
-    { role: "fix", agent: "Fix Agent", content: "Generating remediation patch..." },
-    { role: "code", content: "// AI-generated fix applied\n// See diff for details" },
-    { role: "validator", agent: "Validator Agent", content: "Tests passed. Vulnerability resolved." },
-  ],
-}
-
-const agentChatTextColors: Record<string, string> = {
-  triage: "text-primary",
-  fix: "text-success",
-  validator: "text-warning",
-}
-
-const agentChatBgColors: Record<string, string> = {
-  triage: "bg-primary/10",
-  fix: "bg-success/10",
-  validator: "bg-warning/10",
-}
-
+/* ════════════════════════════════════════════════════════════ */
 export default function ReportsPage() {
   const [search, setSearch] = useState("")
   const [severityFilter, setSeverityFilter] = useState<string>("all")
   const [typeFilter, setTypeFilter] = useState<string>("all")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
   const [selected, setSelected] = useState<Vulnerability | null>(null)
-  const [showAiChat, setShowAiChat] = useState(false)
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
-  const [retesting, setRetesting] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [checkedFindings, setCheckedFindings] = useState<Record<string, boolean>>({})
+  const [activeTab, setActiveTab] = useState("findings")
 
+  // Convert vulnerabilities to findings
+  const findings = vulnerabilities.map(vulnToFinding)
+
+  // Filter findings
   const filtered = vulnerabilities.filter((v) => {
     const matchesSeverity = severityFilter === "all" || v.severity === severityFilter
     const matchesType = typeFilter === "all" || v.type === typeFilter
+    const matchesStatus = statusFilter === "all" || v.status === statusFilter
     const matchesSearch =
       v.title.toLowerCase().includes(search.toLowerCase()) ||
       v.asset.toLowerCase().includes(search.toLowerCase())
-    return matchesSeverity && matchesType && matchesSearch
+    return matchesSeverity && matchesType && matchesSearch && matchesStatus
   })
+
+  // Calculate stats
+  const stats = {
+    total: vulnerabilities.length,
+    critical: vulnerabilities.filter(v => v.severity === "critical").length,
+    high: vulnerabilities.filter(v => v.severity === "high").length,
+    medium: vulnerabilities.filter(v => v.severity === "medium").length,
+    low: vulnerabilities.filter(v => v.severity === "low").length,
+    open: vulnerabilities.filter(v => v.status === "open").length,
+    fixed: vulnerabilities.filter(v => v.status === "fixed").length,
+  }
+
+  // Calculate risk score (0-100, higher is worse)
+  const riskScore = Math.min(100, Math.round(
+    (stats.critical * 25 + stats.high * 15 + stats.medium * 8 + stats.low * 2) / 
+    Math.max(1, stats.total) * 10
+  ))
+
+  const getRiskRating = (score: number) => {
+    if (score >= 80) return { label: "Critical", color: "text-destructive" }
+    if (score >= 60) return { label: "High", color: "text-warning" }
+    if (score >= 40) return { label: "Medium", color: "text-primary" }
+    if (score >= 20) return { label: "Low", color: "text-muted-foreground" }
+    return { label: "Secure", color: "text-success" }
+  }
+
+  const riskRating = getRiskRating(riskScore)
+
+  // Generate executive summary
+  const executiveSummary = `Security analysis identified ${stats.total} findings across all scanned assets. ` +
+    `${stats.critical} critical and ${stats.high} high severity issues require immediate attention. ` +
+    `${stats.fixed} vulnerabilities have been remediated. ` +
+    `Overall risk assessment: ${riskRating.label}.`
 
   const openVuln = (vuln: Vulnerability) => {
     setSelected(vuln)
-    setShowAiChat(false)
-    setChatMessages([])
     setCopied(false)
   }
 
-  const startAiRemediation = () => {
-    if (!selected) return
-    setShowAiChat(true)
-    const key = selected.type in mockAgentChat ? selected.type : "default"
-    const messages = mockAgentChat[key as keyof typeof mockAgentChat] || mockAgentChat.default
-    setChatMessages(messages)
-  }
-
-  const handleRetest = () => {
-    setRetesting(true)
-    setTimeout(() => {
-      setRetesting(false)
-      toast.success("Retest complete!", { description: "Vulnerability confirmed fixed in sandbox." })
-    }, 2500)
-  }
-
-  const handleCopy = async (code: string) => {
+  const handleCopy = async (text: string) => {
     try {
-      await navigator.clipboard.writeText(code)
+      await navigator.clipboard.writeText(text)
       setCopied(true)
-      toast.success("Code copied to clipboard!")
+      toast.success("Copied to clipboard!")
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      toast.error("Failed to copy to clipboard")
+      toast.error("Failed to copy")
     }
   }
 
+  const handlePrint = () => {
+    window.print()
+  }
+
+  const toggleFindingCheck = (id: string) => {
+    setCheckedFindings(prev => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  const checkedCount = Object.values(checkedFindings).filter(Boolean).length
+
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground tracking-tight">Reports & Auto-Fix Engine</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {vulnerabilities.length} vulnerabilities across all asset types. {vulnerabilities.filter(v => v.status === "fixed").length} auto-fixed.
-        </p>
-      </div>
-
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search vulnerabilities..."
-            className="pl-9 bg-secondary border-border text-foreground placeholder:text-muted-foreground"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <Select value={severityFilter} onValueChange={setSeverityFilter}>
-          <SelectTrigger className="w-full sm:w-[140px] bg-secondary border-border text-foreground">
-            <SelectValue placeholder="Severity" />
-          </SelectTrigger>
-          <SelectContent className="bg-card border-border text-foreground">
-            <SelectItem value="all">All Severity</SelectItem>
-            <SelectItem value="critical">Critical</SelectItem>
-            <SelectItem value="high">High</SelectItem>
-            <SelectItem value="medium">Medium</SelectItem>
-            <SelectItem value="low">Low</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-full sm:w-[140px] bg-secondary border-border text-foreground">
-            <SelectValue placeholder="Type" />
-          </SelectTrigger>
-          <SelectContent className="bg-card border-border text-foreground">
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="SAST">SAST</SelectItem>
-            <SelectItem value="DAST">DAST</SelectItem>
-            <SelectItem value="SCA">SCA</SelectItem>
-            <SelectItem value="Web">Web</SelectItem>
-            <SelectItem value="App">App</SelectItem>
-            <SelectItem value="Blockchain">Blockchain</SelectItem>
-            <SelectItem value="Shadow AI">Shadow AI</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="flex gap-6">
-        <div className={`flex-1 min-w-0 ${selected ? "hidden lg:block" : ""}`}>
-          <Card className="bg-card border-border">
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-border hover:bg-transparent">
-                    <TableHead className="text-muted-foreground">Vulnerability</TableHead>
-                    <TableHead className="text-muted-foreground">Severity</TableHead>
-                    <TableHead className="text-muted-foreground hidden md:table-cell">Type</TableHead>
-                    <TableHead className="text-muted-foreground hidden md:table-cell">CVSS</TableHead>
-                    <TableHead className="text-muted-foreground hidden sm:table-cell">Asset</TableHead>
-                    <TableHead className="text-muted-foreground">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((vuln) => (
-                    <TableRow
-                      key={vuln.id}
-                      className="border-border hover:bg-secondary/50 cursor-pointer"
-                      onClick={() => openVuln(vuln)}
-                    >
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <AlertTriangle className={`h-3.5 w-3.5 shrink-0 ${
-                            vuln.severity === "critical" ? "text-destructive" :
-                            vuln.severity === "high" ? "text-warning" : "text-muted-foreground"
-                          }`} />
-                          <span className="text-sm text-foreground truncate max-w-[200px]">{vuln.title}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={`text-[10px] uppercase ${severityStyles[vuln.severity]}`}>
-                          {vuln.severity}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <span className="text-xs text-muted-foreground">{vuln.type}</span>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <span className={`text-sm font-mono ${
-                          vuln.cvss >= 9 ? "text-destructive" : vuln.cvss >= 7 ? "text-warning" : "text-muted-foreground"
-                        }`}>{vuln.cvss}</span>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <span className="text-xs font-mono text-muted-foreground">{vuln.asset}</span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={`text-[10px] ${statusStyles[vuln.status]}`}>
-                          {vuln.status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </div>
-
-        <AnimatePresence>
-          {selected && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              className="w-full lg:w-[440px] shrink-0"
+    <>
+      <style dangerouslySetInnerHTML={{ __html: printStyles }} />
+      
+      <div className="flex flex-col gap-6" id="print-report">
+        {/* ── Header ─────────────────────────────────────────── */}
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">Security Report</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {stats.total} findings | {stats.open} open | {stats.fixed} fixed
+            </p>
+          </div>
+          <div className="flex items-center gap-2 no-print">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="gap-1.5"
+              onClick={handlePrint}
             >
-              <Card className="bg-card border-border sticky top-20">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-foreground text-base">{selected.title}</CardTitle>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => setSelected(null)}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <Badge variant="outline" className={`text-[10px] uppercase ${severityStyles[selected.severity]}`}>{selected.severity}</Badge>
-                    <span className="text-xs text-muted-foreground">{selected.id}</span>
-                    <span className="text-xs font-mono text-muted-foreground">CVSS {selected.cvss}</span>
-                    <Badge variant="outline" className="text-[10px] border-border text-muted-foreground">{selected.type}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Location</p>
-                    <p className="text-sm font-mono text-foreground">{selected.file}{selected.line > 0 ? `:${selected.line}` : ""}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{selected.asset}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Description</p>
-                    <p className="text-sm text-secondary-foreground leading-relaxed">{selected.description}</p>
-                  </div>
+              <Printer className="h-3.5 w-3.5" />
+              Export PDF
+            </Button>
+          </div>
+        </div>
 
-                  <div className="flex gap-2 flex-wrap">
-                    <Button size="sm" className="flex-1 gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90" onClick={startAiRemediation}>
-                      <Bot className="h-3.5 w-3.5" />
-                      AI Remediation
-                    </Button>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
+        {/* ── Executive Summary Card ─────────────────────────── */}
+        <Card className="bg-card border-primary/20">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-primary" />
+                <CardTitle className="text-base">Executive Summary</CardTitle>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Risk Score:</span>
+                <span className={`text-2xl font-bold ${riskRating.color}`}>{riskScore}</span>
+                <Badge variant="outline" className={`${
+                  riskRating.label === "Critical" ? "border-destructive/30 text-destructive" :
+                  riskRating.label === "High" ? "border-warning/30 text-warning" :
+                  riskRating.label === "Medium" ? "border-primary/30 text-primary" :
+                  riskRating.label === "Low" ? "border-border text-muted-foreground" :
+                  "border-success/30 text-success"
+                }`}>
+                  {riskRating.label} Risk
+                </Badge>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">{executiveSummary}</p>
+            
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                <p className="text-xs text-destructive/80">Critical</p>
+                <p className="text-2xl font-bold text-destructive">{stats.critical}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-warning/10 border border-warning/20">
+                <p className="text-xs text-warning/80">High</p>
+                <p className="text-2xl font-bold text-warning">{stats.high}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                <p className="text-xs text-primary/80">Medium</p>
+                <p className="text-2xl font-bold text-primary">{stats.medium}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-muted border border-border">
+                <p className="text-xs text-muted-foreground">Low</p>
+                <p className="text-2xl font-bold text-muted-foreground">{stats.low}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-success/10 border border-success/20">
+                <p className="text-xs text-success/80">Fixed</p>
+                <p className="text-2xl font-bold text-success">{stats.fixed}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ── Tabs ───────────────────────────────────────────── */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="no-print">
+          <TabsList className="bg-secondary border border-border">
+            <TabsTrigger value="findings" className="gap-1.5 data-[state=active]:bg-background">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              Findings
+            </TabsTrigger>
+            <TabsTrigger value="checklist" className="gap-1.5 data-[state=active]:bg-background">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Remediation Checklist
+              {checkedCount > 0 && (
+                <Badge variant="outline" className="ml-1 text-[10px] border-success/30 text-success h-4 px-1">
+                  {checkedCount}/{stats.total}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          {/* ── Findings Tab ─────────────────────────────────── */}
+          <TabsContent value="findings" className="mt-4">
+            {/* Filters */}
+            <div className="flex flex-col gap-3 sm:flex-row mb-4 no-print">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search findings..."
+                  className="pl-9 bg-secondary border-border text-foreground"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+              <Select value={severityFilter} onValueChange={setSeverityFilter}>
+                <SelectTrigger className="w-full sm:w-[130px] bg-secondary border-border">
+                  <SelectValue placeholder="Severity" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border">
+                  <SelectItem value="all">All Severity</SelectItem>
+                  <SelectItem value="critical">Critical</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-full sm:w-[130px] bg-secondary border-border">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border">
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="Blockchain">Blockchain</SelectItem>
+                  <SelectItem value="Web">Web</SelectItem>
+                  <SelectItem value="App">App</SelectItem>
+                  <SelectItem value="SAST">SAST</SelectItem>
+                  <SelectItem value="DAST">DAST</SelectItem>
+                  <SelectItem value="SCA">SCA</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-[130px] bg-secondary border-border">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border">
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="open">Open</SelectItem>
+                  <SelectItem value="fixed">Fixed</SelectItem>
+                  <SelectItem value="ignored">Ignored</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Findings Table */}
+            <div className="flex gap-6">
+              <div className={`flex-1 min-w-0 ${selected ? "hidden lg:block" : ""}`}>
+                <Card className="bg-card border-border">
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-border hover:bg-transparent">
+                          <TableHead className="text-muted-foreground w-[250px]">Vulnerability</TableHead>
+                          <TableHead className="text-muted-foreground">Severity</TableHead>
+                          <TableHead className="text-muted-foreground hidden md:table-cell">CVSS</TableHead>
+                          <TableHead className="text-muted-foreground hidden md:table-cell">OWASP</TableHead>
+                          <TableHead className="text-muted-foreground hidden sm:table-cell">Asset</TableHead>
+                          <TableHead className="text-muted-foreground">Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filtered.map((vuln) => {
+                          const finding = vulnToFinding(vuln)
+                          return (
+                            <TableRow
+                              key={vuln.id}
+                              className="border-border hover:bg-secondary/50 cursor-pointer"
+                              onClick={() => openVuln(vuln)}
+                            >
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <AlertTriangle className={`h-3.5 w-3.5 shrink-0 ${
+                                    vuln.severity === "critical" ? "text-destructive" :
+                                    vuln.severity === "high" ? "text-warning" : "text-muted-foreground"
+                                  }`} />
+                                  <span className="text-sm text-foreground truncate max-w-[200px]">{vuln.title}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className={`text-[10px] uppercase ${severityStyles[vuln.severity as Severity]}`}>
+                                  {vuln.severity}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                <span className={`text-sm font-mono ${
+                                  vuln.cvss >= 9 ? "text-destructive" : vuln.cvss >= 7 ? "text-warning" : "text-muted-foreground"
+                                }`}>{vuln.cvss}</span>
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                <span className="text-[10px] text-muted-foreground font-mono">
+                                  {finding.owasp.split("-")[0]}
+                                </span>
+                              </TableCell>
+                              <TableCell className="hidden sm:table-cell">
+                                <span className="text-xs font-mono text-muted-foreground">{vuln.asset}</span>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className={`text-[10px] ${statusStyles[vuln.status]}`}>
+                                  {vuln.status}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Detail Panel */}
+              <AnimatePresence>
+                {selected && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    className="w-full lg:w-[440px] shrink-0"
+                  >
+                    <Card className="bg-card border-border sticky top-20">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-foreground text-base pr-2">{selected.title}</CardTitle>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground shrink-0" 
+                            onClick={() => setSelected(null)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <Badge variant="outline" className={`text-[10px] uppercase ${severityStyles[selected.severity as Severity]}`}>
+                            {selected.severity}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">{selected.id}</span>
+                          <span className="text-xs font-mono text-muted-foreground">CVSS {selected.cvss}</span>
+                          <Badge variant="outline" className="text-[10px] border-border text-muted-foreground">
+                            {vulnToFinding(selected).owasp.split("-")[0]}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="flex flex-col gap-4">
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Location</p>
+                          <p className="text-sm font-mono text-foreground">{selected.file}{selected.line > 0 ? `:${selected.line}` : ""}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{selected.asset}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Description</p>
+                          <p className="text-sm text-secondary-foreground leading-relaxed">{selected.description}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">OWASP Category</p>
+                          <p className="text-sm text-foreground">{vulnToFinding(selected).owasp}</p>
+                        </div>
+
+                        <div className="flex gap-2 flex-wrap no-print">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="gap-1.5 border-border text-foreground hover:bg-secondary"
+                                  onClick={() => {
+                                    toast.success("PR created!", { description: `Auto-Fix PR for ${selected.title}` })
+                                  }}
+                                >
+                                  <GitPullRequest className="h-3.5 w-3.5" />
+                                  Create PR
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent className="bg-popover text-popover-foreground border-border">
+                                Create a GitHub PR with the fix
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                           <Button
                             size="sm"
                             variant="outline"
-                            className="gap-1.5 border-border text-foreground hover:bg-secondary"
-                            onClick={() => toast.success("PR created!", { description: `Auto-Fix PR for ${selected.title}` })}
+                            className="gap-1.5"
+                            onClick={() => handleCopy(JSON.stringify(vulnToFinding(selected), null, 2))}
                           >
-                            <GitPullRequest className="h-3.5 w-3.5" />
-                            Auto-Open PR
+                            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                            Copy JSON
                           </Button>
-                        </TooltipTrigger>
-                        <TooltipContent className="bg-popover text-popover-foreground border-border">
-                          Simulates GitHub PR creation with test results
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    {(selected.type === "Web" || selected.type === "App") && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1.5 border-success/30 text-success hover:bg-success/10"
-                        onClick={() => toast.success("Fix applied to live site!", { description: `${selected.asset} updated` })}
-                      >
-                        <Globe className="h-3.5 w-3.5" />
-                        Apply to Live
-                      </Button>
-                    )}
-                  </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </TabsContent>
 
-                  {showAiChat && (
-                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="border border-border rounded-lg overflow-hidden">
-                      <div className="bg-sidebar px-3 py-2 border-b border-border flex items-center gap-2">
-                        <Bot className="h-3.5 w-3.5 text-primary" />
-                        <span className="text-xs text-foreground font-medium">Security Agents Collaborating</span>
-                      </div>
-                      <ScrollArea className="h-[300px] p-3">
-                        <div className="flex flex-col gap-3">
-                          {chatMessages.map((msg, idx) => (
-                            <div key={idx}>
-                              {msg.role === "code" ? (
-                                <div className="flex flex-col gap-2">
-                                  {selected?.type === "Web" && (
-                                    <div className="bg-muted p-3 rounded-xl">
-                                      <p className="font-mono text-sm text-foreground">Fixed with Content-Security-Policy header + DOMPurify</p>
-                                      <pre className="mt-2 text-xs bg-background p-2.5 rounded font-mono text-muted-foreground">{"Content-Security-Policy: default-src 'self';"}</pre>
-                                    </div>
-                                  )}
-                                  {selected?.type === "Blockchain" && (
-                                    <div className="bg-muted p-3 rounded-xl">
-                                      <p className="font-mono text-sm text-foreground">Fixed with OpenZeppelin ReentrancyGuard + CEI pattern</p>
-                                      <pre className="mt-2 text-xs bg-background p-2.5 rounded font-mono text-muted-foreground">{"modifier nonReentrant { ... }"}</pre>
-                                    </div>
-                                  )}
-                                  {selected?.type === "App" && (
-                                    <div className="bg-muted p-3 rounded-xl">
-                                      <p className="font-mono text-sm text-foreground">Fixed with strict CORS origin whitelist + credentials policy</p>
-                                      <pre className="mt-2 text-xs bg-background p-2.5 rounded font-mono text-muted-foreground">{"origin: ['https://app.example.com']"}</pre>
-                                    </div>
-                                  )}
-                                  {selected?.type === "SAST" && (
-                                    <div className="bg-muted p-3 rounded-xl">
-                                      <p className="font-mono text-sm text-foreground">Fixed with parameterized queries + input validation</p>
-                                      <pre className="mt-2 text-xs bg-background p-2.5 rounded font-mono text-muted-foreground">{"db.query('SELECT * FROM users WHERE id = $1', [id])"}</pre>
-                                    </div>
-                                  )}
-                                  <div className="relative">
-                                    <pre className="bg-sidebar border border-border rounded-md p-3 text-xs font-mono text-foreground overflow-x-auto whitespace-pre-wrap">
-                                      {msg.content}
-                                    </pre>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="absolute top-2 right-2 h-6 w-6 text-muted-foreground hover:text-foreground"
-                                      onClick={() => handleCopy(msg.content)}
-                                    >
-                                      {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
-                                    </Button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="flex items-start gap-2">
-                                  <div className={`flex h-5 w-5 items-center justify-center rounded-full shrink-0 mt-0.5 ${agentChatBgColors[msg.role] || "bg-muted"}`}>
-                                    <Bot className={`h-3 w-3 ${agentChatTextColors[msg.role] || "text-muted-foreground"}`} />
-                                  </div>
-                                  <div>
-                                    <p className={`text-[10px] font-medium mb-0.5 ${agentChatTextColors[msg.role] || "text-muted-foreground"}`}>{msg.agent}</p>
-                                    <p className="text-sm text-secondary-foreground leading-relaxed">{msg.content}</p>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          ))}
+          {/* ── Remediation Checklist Tab ────────────────────── */}
+          <TabsContent value="checklist" className="mt-4">
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                  Remediation Checklist
+                </CardTitle>
+                <CardDescription>
+                  Track your progress fixing vulnerabilities. {checkedCount} of {stats.open} open issues addressed.
+                </CardDescription>
+                <Progress value={(checkedCount / Math.max(1, stats.open)) * 100} className="h-2 mt-2" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {vulnerabilities
+                    .filter(v => v.status === "open")
+                    .sort((a, b) => {
+                      const order = { critical: 0, high: 1, medium: 2, low: 3 }
+                      return (order[a.severity as keyof typeof order] || 4) - (order[b.severity as keyof typeof order] || 4)
+                    })
+                    .map((vuln) => (
+                      <div
+                        key={vuln.id}
+                        className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
+                          checkedFindings[vuln.id] 
+                            ? "border-success/30 bg-success/5" 
+                            : "border-border bg-secondary/30"
+                        }`}
+                      >
+                        <Checkbox
+                          id={vuln.id}
+                          checked={checkedFindings[vuln.id] || false}
+                          onCheckedChange={() => toggleFindingCheck(vuln.id)}
+                          className="mt-0.5"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <label
+                            htmlFor={vuln.id}
+                            className={`text-sm font-medium cursor-pointer ${
+                              checkedFindings[vuln.id] ? "text-muted-foreground line-through" : "text-foreground"
+                            }`}
+                          >
+                            {vuln.title}
+                          </label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="outline" className={`text-[10px] uppercase ${severityStyles[vuln.severity as Severity]}`}>
+                              {vuln.severity}
+                            </Badge>
+                            <span className="text-[10px] text-muted-foreground font-mono">{vuln.asset}</span>
+                          </div>
                         </div>
-                      </ScrollArea>
-                      <div className="border-t border-border p-2 flex gap-2">
                         <Button
+                          variant="ghost"
                           size="sm"
-                          variant="outline"
-                          className="gap-1.5 border-border text-foreground hover:bg-secondary"
-                          onClick={handleRetest}
-                          disabled={retesting}
+                          className="h-7 text-xs shrink-0"
+                          onClick={() => openVuln(vuln)}
                         >
-                          {retesting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FlaskConical className="h-3.5 w-3.5" />}
-                          Retest in Sandbox
+                          View
                         </Button>
-                        <div className="flex-1 flex gap-2">
-                          <Input placeholder="Ask about this vulnerability..." className="bg-secondary border-border text-foreground text-xs placeholder:text-muted-foreground h-8" />
-                          <Button size="icon" className="h-8 w-8 bg-primary text-primary-foreground hover:bg-primary/90 shrink-0">
-                            <Send className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
                       </div>
-                    </motion.div>
+                    ))}
+                  
+                  {vulnerabilities.filter(v => v.status === "open").length === 0 && (
+                    <div className="text-center py-8">
+                      <CheckCircle2 className="h-10 w-10 text-success mx-auto mb-3" />
+                      <p className="text-sm text-muted-foreground">All vulnerabilities have been addressed!</p>
+                    </div>
                   )}
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        {/* ── Print-only full findings list ──────────────────── */}
+        <div className="hidden print:block print-break">
+          <h2 className="text-lg font-bold mb-4">Detailed Findings</h2>
+          {vulnerabilities.map((vuln, i) => (
+            <div key={vuln.id} className="mb-6 p-4 border border-border rounded">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm font-bold">{i + 1}. {vuln.title}</span>
+                <span className={`text-xs uppercase px-2 py-0.5 rounded ${
+                  vuln.severity === "critical" ? "bg-red-100 text-red-800" :
+                  vuln.severity === "high" ? "bg-orange-100 text-orange-800" :
+                  vuln.severity === "medium" ? "bg-blue-100 text-blue-800" :
+                  "bg-gray-100 text-gray-800"
+                }`}>
+                  {vuln.severity}
+                </span>
+              </div>
+              <p className="text-sm mb-2"><strong>Asset:</strong> {vuln.asset}</p>
+              <p className="text-sm mb-2"><strong>Location:</strong> {vuln.file}{vuln.line > 0 ? `:${vuln.line}` : ""}</p>
+              <p className="text-sm mb-2"><strong>CVSS:</strong> {vuln.cvss}</p>
+              <p className="text-sm mb-2"><strong>OWASP:</strong> {vulnToFinding(vuln).owasp}</p>
+              <p className="text-sm"><strong>Description:</strong> {vuln.description}</p>
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+    </>
   )
 }

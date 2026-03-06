@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import {
   Terminal, Clock, XCircle, Bot, Globe, Smartphone, Copy, Check,
   ChevronDown, ChevronUp, ShieldCheck, AlertTriangle, FileCode,
-  Zap, Code, Shield, Search, ScanLine,
+  Zap, Code, Shield, Search, ScanLine, CheckCircle2, Loader2,
+  ExternalLink, X,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -17,231 +18,259 @@ import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { activeScans, agents, type AssetType, type Severity } from "@/lib/mock-data"
+import { agents, type AssetType } from "@/lib/mock-data"
+import type { ScanResult, Finding, Severity } from "@/lib/types"
 import { agentTextColor, agentBgColor } from "@/lib/agent-colors"
 import { toast } from "sonner"
 
-/* ── colour maps ────────────────────────────────────────── */
-const toolColors: Record<string, string> = {
-  "OWASP ZAP": "border-success/30 text-success bg-success/10",
-  Slither: "border-accent/30 text-accent bg-accent/10",
-  Nuclei: "border-primary/30 text-primary bg-primary/10",
-  Mythril: "border-warning/30 text-warning bg-warning/10",
-  Semgrep: "border-primary/30 text-primary bg-primary/10",
+/* ── Type definitions ───────────────────────────────────────── */
+type ScanType = "website" | "repo" | "contract" | "api"
+
+interface ActiveScan {
+  id: string
+  target: string
+  type: ScanType
+  status: "initializing" | "scanning" | "analyzing" | "completed" | "failed"
+  progress: number
+  checks: ScanCheck[]
+  startedAt: Date
+  result?: ScanResult
 }
 
-const assetTypeBadge: Record<AssetType, string> = {
-  Repo: "border-primary/30 text-primary",
-  Website: "border-success/30 text-success",
-  WebApp: "border-primary/30 text-primary",
-  SmartContract: "border-accent/30 text-accent",
+interface ScanCheck {
+  id: string
+  name: string
+  status: "pending" | "running" | "passed" | "failed" | "warning"
 }
 
+/* ── Check configurations per scan type ─────────────────────── */
+const scanChecks: Record<ScanType, ScanCheck[]> = {
+  website: [
+    { id: "headers", name: "Security Headers", status: "pending" },
+    { id: "tls", name: "TLS/SSL Configuration", status: "pending" },
+    { id: "sensitive", name: "Exposed Files", status: "pending" },
+    { id: "cors", name: "CORS Policy", status: "pending" },
+    { id: "cookies", name: "Cookie Security", status: "pending" },
+  ],
+  repo: [
+    { id: "secrets", name: "Hardcoded Secrets", status: "pending" },
+    { id: "deps", name: "Dependency Vulnerabilities", status: "pending" },
+    { id: "security", name: "Security Configuration", status: "pending" },
+  ],
+  contract: [
+    { id: "fetch", name: "Fetching Contract Source", status: "pending" },
+    { id: "reentrancy", name: "Reentrancy Analysis", status: "pending" },
+    { id: "access", name: "Access Control", status: "pending" },
+    { id: "overflow", name: "Integer Safety", status: "pending" },
+    { id: "compiler", name: "Compiler Version", status: "pending" },
+  ],
+  api: [
+    { id: "graphql", name: "GraphQL Introspection", status: "pending" },
+    { id: "swagger", name: "OpenAPI Exposure", status: "pending" },
+    { id: "debug", name: "Debug Endpoints", status: "pending" },
+    { id: "ratelimit", name: "Rate Limiting", status: "pending" },
+    { id: "jwt", name: "JWT Security", status: "pending" },
+  ],
+}
+
+/* ── Color mappings ─────────────────────────────────────────── */
 const severityBadge: Record<Severity, string> = {
   critical: "bg-destructive/15 text-destructive border-destructive/30",
   high: "bg-warning/15 text-warning border-warning/30",
   medium: "bg-primary/15 text-primary border-primary/30",
   low: "bg-muted text-muted-foreground border-border",
+  info: "bg-muted text-muted-foreground border-border",
 }
 
-/* ── types ──────────────────────────────────────────────── */
-interface ScanFinding {
-  id: string
-  title: string
-  severity: Severity
-  file: string
-  line: number
-  description: string
-  fix: string
+const scanTypeBadge: Record<ScanType, { bg: string; text: string; icon: React.ReactNode }> = {
+  website: { bg: "bg-success/10", text: "text-success", icon: <Globe className="h-3.5 w-3.5" /> },
+  repo: { bg: "bg-primary/10", text: "text-primary", icon: <Code className="h-3.5 w-3.5" /> },
+  contract: { bg: "bg-accent/10", text: "text-accent", icon: <Shield className="h-3.5 w-3.5" /> },
+  api: { bg: "bg-warning/10", text: "text-warning", icon: <Terminal className="h-3.5 w-3.5" /> },
 }
 
-interface CompletedScan {
-  id: string
-  asset: string
-  assetType: AssetType
-  tool: string
-  findings: ScanFinding[]
-  completedAt: string
-  scanDuration: string
+/* ── Detect scan type from input ────────────────────────────── */
+function detectScanType(input: string): ScanType {
+  const trimmed = input.trim().toLowerCase()
+  
+  // Contract address
+  if (/^0x[a-f0-9]{40}$/i.test(trimmed)) return "contract"
+  
+  // GitHub repo
+  if (trimmed.includes("github.com/") || /^[a-z0-9-]+\/[a-z0-9._-]+$/i.test(trimmed)) return "repo"
+  
+  // Default to website
+  return "website"
 }
 
-interface RunScan {
-  id: string
-  asset: string
-  assetType: AssetType
-  tool: string
-  progress: number
-  status: "scanning" | "analyzing" | "reporting" | "completed"
-  logs: string[]
-  startedAt: string
-}
-
-/* ── findings database ──────────────────────────────────── */
-const scanFindings: Record<string, ScanFinding[]> = {
-  "yoursite.com": [
-    {
-      id: "F-001", title: "Reflected XSS on /search", severity: "critical",
-      file: "/search?q=", line: 0,
-      description: "User input is reflected in the DOM without sanitization, allowing script injection.",
-      fix: `// Before (vulnerable)\napp.get('/search', (req, res) => {\n  res.send(\`<h1>Results for: \${req.query.q}</h1>\`);\n});\n\n// After (secure) - Sanitize all user input\nimport DOMPurify from 'dompurify';\n\napp.get('/search', (req, res) => {\n  const safeQuery = DOMPurify.sanitize(req.query.q || '');\n  res.send(\`<h1>Results for: \${safeQuery}</h1>\`);\n});`,
-    },
-    {
-      id: "F-002", title: "SQL Injection in search API", severity: "critical",
-      file: "/api/search", line: 0,
-      description: "Dynamic SQL query constructed from user input without parameterization.",
-      fix: `// Before (vulnerable)\nconst results = await db.query(\n  \`SELECT * FROM products WHERE name LIKE '%\${userInput}%'\`\n);\n\n// After (secure) - Use parameterized queries\nconst results = await db.query(\n  'SELECT * FROM products WHERE name LIKE $1',\n  [\`%\${userInput}%\`]\n);`,
-    },
-  ],
-  "defi-protocol": [
-    {
-      id: "F-003", title: "Reentrancy in withdraw()", severity: "critical",
-      file: "contracts/Vault.sol", line: 89,
-      description: "External call before state update allows reentrancy attack to drain funds.",
-      fix: `// Before (vulnerable)\nfunction withdraw(uint256 amount) external {\n    require(balances[msg.sender] >= amount);\n    (bool success, ) = msg.sender.call{value: amount}("");\n    require(success);\n    balances[msg.sender] -= amount;\n}\n\n// After (secure) - Checks-Effects-Interactions\nfunction withdraw(uint256 amount) external nonReentrant {\n    require(balances[msg.sender] >= amount);\n    balances[msg.sender] -= amount;\n    (bool success, ) = msg.sender.call{value: amount}("");\n    require(success);\n}`,
-    },
-    {
-      id: "F-004", title: "Missing access control on setFee()", severity: "high",
-      file: "contracts/Governance.sol", line: 45,
-      description: "The setFee() function lacks the onlyOwner modifier.",
-      fix: `// Before (vulnerable)\nfunction setFee(uint256 newFee) external {\n    protocolFee = newFee;\n}\n\n// After (secure) - Add access control\nfunction setFee(uint256 newFee) external onlyOwner {\n    require(newFee <= MAX_FEE, "Fee too high");\n    protocolFee = newFee;\n    emit FeeUpdated(newFee);\n}`,
-    },
-  ],
-  "app.example.com": [
-    {
-      id: "F-005", title: "Insecure CORS policy", severity: "high",
-      file: "server/cors.config.js", line: 12,
-      description: "Access-Control-Allow-Origin set to wildcard (*) allowing any domain to make requests.",
-      fix: `// Before (vulnerable)\napp.use(cors({ origin: '*' }));\n\n// After (secure) - Whitelist origins\nconst allowedOrigins = [\n  'https://app.example.com',\n  'https://admin.example.com',\n];\n\napp.use(cors({\n  origin: (origin, callback) => {\n    if (!origin || allowedOrigins.includes(origin)) {\n      callback(null, true);\n    } else {\n      callback(new Error('Not allowed by CORS'));\n    }\n  },\n  credentials: true,\n}));`,
-    },
-    {
-      id: "F-006", title: "Exposed debug endpoint", severity: "high",
-      file: "/debug/vars", line: 0,
-      description: "Debug endpoint exposes environment variables including database credentials.",
-      fix: `// Before (vulnerable)\napp.get('/debug/vars', (req, res) => {\n  res.json(process.env);\n});\n\n// After (secure) - Remove or gate behind auth\nif (process.env.NODE_ENV === 'development') {\n  app.get('/debug/vars', requireAdmin, (req, res) => {\n    const safeVars = { NODE_ENV: process.env.NODE_ENV };\n    res.json(safeVars);\n  });\n}`,
-    },
-  ],
-  "vault-contracts": [
-    {
-      id: "F-007", title: "Integer overflow in token math", severity: "medium",
-      file: "contracts/Token.sol", line: 34,
-      description: "Arithmetic operations without overflow checks can lead to incorrect balances.",
-      fix: `// Before (vulnerable)\nuint256 total = balance + amount; // Can overflow\n\n// After (secure) - Use Solidity >= 0.8.0\npragma solidity ^0.8.0;\nuint256 total = balance + amount; // Auto-reverts on overflow`,
-    },
-  ],
-  "frontend-app": [
-    {
-      id: "F-008", title: "Prototype pollution in lodash", severity: "high",
-      file: "package.json", line: 24,
-      description: "lodash < 4.17.21 is vulnerable to prototype pollution via the merge function.",
-      fix: `// Fix: Update lodash\n"lodash": "^4.17.21"\n\n// Or replace with native:\nconst config = { ...defaults, ...structuredClone(userInput) };`,
-    },
-  ],
-}
-
-/* ── status label map ───────────────────────────────────── */
-const statusLabels: Record<string, string> = {
-  scanning: "Scanning...",
-  analyzing: "Analyzing...",
-  reporting: "Generating report...",
-  completed: "Complete",
-}
-
-/* ════════════════════════════════════════════════════════ */
+/* ════════════════════════════════════════════════════════════ */
 export default function ScansPage() {
-  const [scans, setScans] = useState<RunScan[]>(activeScans.map((s) => ({ ...s })))
-  const [completedScans, setCompletedScans] = useState<CompletedScan[]>([])
+  const [activeScans, setActiveScans] = useState<ActiveScan[]>([])
+  const [completedScans, setCompletedScans] = useState<ScanResult[]>([])
   const [agenticMode, setAgenticMode] = useState(false)
   const [quickUrl, setQuickUrl] = useState("")
+  const [activeTab, setActiveTab] = useState("active")
   const [expandedResults, setExpandedResults] = useState<Record<string, boolean>>({})
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState("active")
+  const [isScanning, setIsScanning] = useState(false)
+  const scanIdRef = useRef(0)
 
-  /* ── scan completion handler ──────────────────────────── */
-  const completeScan = useCallback((scan: RunScan) => {
-    const findings = scanFindings[scan.asset] || [
-      {
-        id: `F-${Date.now()}`, title: "No critical issues found", severity: "low" as Severity,
-        file: "N/A", line: 0,
-        description: "Scan completed with no critical or high severity findings.",
-        fix: "// No remediation needed - scan passed!",
-      },
-    ]
-    const completed: CompletedScan = {
-      id: scan.id, asset: scan.asset, assetType: scan.assetType, tool: scan.tool,
-      findings, completedAt: "just now", scanDuration: scan.startedAt,
+  /* ── Start a real scan ────────────────────────────────────── */
+  const startRealScan = useCallback(async (target: string, type: ScanType) => {
+    const scanId = `scan-${++scanIdRef.current}-${Date.now()}`
+    const checks = scanChecks[type].map(c => ({ ...c, status: "pending" as const }))
+    
+    const newScan: ActiveScan = {
+      id: scanId,
+      target,
+      type,
+      status: "initializing",
+      progress: 0,
+      checks,
+      startedAt: new Date(),
     }
-    setCompletedScans((prev) => [completed, ...prev])
-    setScans((prev) => prev.filter((s) => s.id !== scan.id))
-    setExpandedResults((prev) => ({ ...prev, [scan.id]: true }))
-
-    const critCount = findings.filter((f) => f.severity === "critical").length
-    const highCount = findings.filter((f) => f.severity === "high").length
-    if (critCount > 0) {
-      toast.error(`Scan complete: ${scan.asset} -- ${critCount} critical, ${highCount} high severity`, { duration: 5000 })
-    } else if (highCount > 0) {
-      toast.warning(`Scan complete: ${scan.asset} -- ${highCount} high severity findings`, { duration: 5000 })
-    } else {
-      toast.success(`Scan complete: ${scan.asset} -- No critical issues`, { duration: 4000 })
+    
+    setActiveScans(prev => [newScan, ...prev])
+    setActiveTab("active")
+    setIsScanning(true)
+    
+    // Simulate check progress
+    const updateCheck = (checkId: string, status: ScanCheck["status"]) => {
+      setActiveScans(prev => prev.map(scan => {
+        if (scan.id !== scanId) return scan
+        return {
+          ...scan,
+          checks: scan.checks.map(c => c.id === checkId ? { ...c, status } : c),
+          progress: Math.min(scan.progress + 15, 90),
+          status: "scanning",
+        }
+      }))
     }
-    // Auto-switch to results tab
-    setActiveTab("results")
+    
+    // Run through checks visually
+    for (let i = 0; i < checks.length; i++) {
+      await new Promise(r => setTimeout(r, 300))
+      updateCheck(checks[i].id, "running")
+      await new Promise(r => setTimeout(r, 400))
+    }
+    
+    // Make real API call
+    try {
+      const endpoint = `/api/scan/${type}`
+      const body = type === "contract" 
+        ? { address: target }
+        : { url: target }
+      
+      setActiveScans(prev => prev.map(scan => 
+        scan.id === scanId ? { ...scan, status: "analyzing", progress: 85 } : scan
+      ))
+      
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+      
+      const result: ScanResult = await response.json()
+      
+      // Update checks based on findings
+      setActiveScans(prev => prev.map(scan => {
+        if (scan.id !== scanId) return scan
+        
+        const updatedChecks = scan.checks.map(check => {
+          const hasIssue = result.findings?.some(f => 
+            f.id.toLowerCase().includes(check.id) || 
+            f.title.toLowerCase().includes(check.name.toLowerCase().split(" ")[0])
+          )
+          return {
+            ...check,
+            status: (hasIssue ? "warning" : "passed") as ScanCheck["status"],
+          }
+        })
+        
+        return {
+          ...scan,
+          status: "completed",
+          progress: 100,
+          checks: updatedChecks,
+          result,
+        }
+      }))
+      
+      // Move to completed after delay
+      setTimeout(() => {
+        setActiveScans(prev => prev.filter(s => s.id !== scanId))
+        setCompletedScans(prev => [result, ...prev])
+        setExpandedResults(prev => ({ ...prev, [result.id]: true }))
+        setActiveTab("results")
+        
+        const { critical = 0, high = 0 } = result.summary || {}
+        if (critical > 0) {
+          toast.error(`Scan complete: ${target}`, {
+            description: `${critical} critical, ${high} high severity findings`,
+          })
+        } else if (high > 0) {
+          toast.warning(`Scan complete: ${target}`, {
+            description: `${high} high severity findings`,
+          })
+        } else {
+          toast.success(`Scan complete: ${target}`, {
+            description: result.summary?.total === 0 
+              ? "No issues detected" 
+              : `${result.summary?.total} findings`,
+          })
+        }
+      }, 1000)
+      
+    } catch (error) {
+      setActiveScans(prev => prev.map(scan => 
+        scan.id === scanId ? { 
+          ...scan, 
+          status: "failed", 
+          progress: 100,
+          checks: scan.checks.map(c => ({ ...c, status: "failed" as const })),
+        } : scan
+      ))
+      
+      toast.error(`Scan failed: ${target}`, {
+        description: error instanceof Error ? error.message : "Unknown error",
+      })
+      
+      setTimeout(() => {
+        setActiveScans(prev => prev.filter(s => s.id !== scanId))
+      }, 3000)
+    } finally {
+      setIsScanning(false)
+    }
   }, [])
 
-  /* ── progress ticker ──────────────────────────────────── */
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setScans((prev) => {
-        const updated = prev.map((scan) => {
-          const newProgress = Math.min(scan.progress + 1.8, 100)
-          let newStatus = scan.status
-          const newLogs = [...scan.logs]
+  /* ── Quick scan handler ───────────────────────────────────── */
+  const startQuickScan = useCallback((overrideType?: ScanType) => {
+    if (!quickUrl.trim()) {
+      toast.error("Enter a URL, repo, or contract address to scan")
+      return
+    }
+    
+    const type = overrideType || detectScanType(quickUrl)
+    startRealScan(quickUrl.trim(), type)
+    setQuickUrl("")
+  }, [quickUrl, startRealScan])
 
-          if (newProgress >= 50 && scan.status === "scanning") {
-            newStatus = "analyzing"
-            newLogs.push("[INFO] Analysis phase started...")
-          }
-          if (newProgress >= 80 && scan.status === "analyzing") {
-            newStatus = "reporting"
-            newLogs.push("[INFO] Generating remediation report...")
-          }
-          if (newProgress >= 95 && !newLogs.some((l) => l.includes("[DONE]"))) {
-            newLogs.push("[DONE] Scan complete -- generating fix code...")
-          }
-          return { ...scan, progress: newProgress, status: newStatus, logs: newLogs }
-        })
-
-        const justCompleted = updated.filter((s) => s.progress >= 100 && s.status !== "completed")
-        justCompleted.forEach((s) => {
-          setTimeout(() => completeScan(s), 300)
-        })
-        return updated.filter((s) => s.progress < 100)
-      })
-    }, 1200)
-    return () => clearInterval(interval)
-  }, [completeScan])
-
+  /* ── Copy code helper ─────────────────────────────────────── */
   const copyCode = (code: string, id: string) => {
     navigator.clipboard.writeText(code)
     setCopiedId(id)
-    toast.success("Fix code copied to clipboard")
+    toast.success("Code copied to clipboard")
     setTimeout(() => setCopiedId(null), 2000)
   }
 
-  const startQuickScan = (type: string) => {
-    if (!quickUrl.trim()) {
-      toast.error("Enter a URL or address to scan")
-      return
-    }
-    toast.success(`${type} scan started for ${quickUrl}`, { description: "Estimated completion: ~47 seconds." })
-    setQuickUrl("")
-  }
-
-  const totalFindings = completedScans.reduce((acc, s) => acc + s.findings.length, 0)
-  const criticalFindings = completedScans.reduce((acc, s) => acc + s.findings.filter((f) => f.severity === "critical").length, 0)
+  /* ── Stats ────────────────────────────────────────────────── */
+  const totalFindings = completedScans.reduce((acc, s) => acc + (s.summary?.total || 0), 0)
+  const criticalFindings = completedScans.reduce((acc, s) => acc + (s.summary?.critical || 0), 0)
 
   return (
     <div className="flex flex-col gap-6">
-      {/* ── HERO: Quick Scan ─────────────────────────────── */}
+      {/* ── HERO: Quick Scan ─────────────────────────────────── */}
       <Card className="bg-card border-primary/20 overflow-hidden">
         <CardContent className="p-5">
           <div className="flex flex-col gap-4">
@@ -252,7 +281,7 @@ export default function ScansPage() {
                 </div>
                 <div>
                   <h1 className="text-xl font-bold text-foreground tracking-tight">Start a Scan</h1>
-                  <p className="text-xs text-muted-foreground">Paste a URL, repo, or contract address to scan instantly</p>
+                  <p className="text-xs text-muted-foreground">Real security analysis - paste a URL, repo, or contract address</p>
                 </div>
               </div>
               <TooltipProvider>
@@ -275,34 +304,64 @@ export default function ScansPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="https://yoursite.com, github.com/user/repo, or 0xContractAddress"
+                  placeholder="https://example.com, github.com/user/repo, or 0x..."
                   value={quickUrl}
                   onChange={(e) => setQuickUrl(e.target.value)}
                   className="pl-9 bg-secondary border-border text-foreground placeholder:text-muted-foreground font-mono text-sm h-10"
-                  onKeyDown={(e) => { if (e.key === "Enter") startQuickScan("Full Spectrum") }}
+                  onKeyDown={(e) => { if (e.key === "Enter" && !isScanning) startQuickScan() }}
+                  disabled={isScanning}
                 />
               </div>
               <Button
                 className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold h-10 px-5 shrink-0"
-                onClick={() => startQuickScan("Full Spectrum")}
+                onClick={() => startQuickScan()}
+                disabled={isScanning}
               >
-                <Zap className="h-4 w-4" />
-                Scan Now
+                {isScanning ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Zap className="h-4 w-4" />
+                )}
+                {isScanning ? "Scanning..." : "Scan Now"}
               </Button>
             </div>
 
             {/* Scan type buttons */}
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" className="gap-1.5 border-border text-foreground hover:bg-secondary text-xs h-8" onClick={() => startQuickScan("Website DAST")}>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-1.5 border-border text-foreground hover:bg-secondary text-xs h-8" 
+                onClick={() => startQuickScan("website")}
+                disabled={isScanning || !quickUrl.trim()}
+              >
                 <Globe className="h-3.5 w-3.5 text-success" /> Website
               </Button>
-              <Button variant="outline" size="sm" className="gap-1.5 border-border text-foreground hover:bg-secondary text-xs h-8" onClick={() => startQuickScan("Web App")}>
-                <Smartphone className="h-3.5 w-3.5 text-primary" /> Web App
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-1.5 border-border text-foreground hover:bg-secondary text-xs h-8" 
+                onClick={() => startQuickScan("api")}
+                disabled={isScanning || !quickUrl.trim()}
+              >
+                <Terminal className="h-3.5 w-3.5 text-warning" /> API
               </Button>
-              <Button variant="outline" size="sm" className="gap-1.5 border-border text-foreground hover:bg-secondary text-xs h-8" onClick={() => startQuickScan("Code Repo")}>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-1.5 border-border text-foreground hover:bg-secondary text-xs h-8" 
+                onClick={() => startQuickScan("repo")}
+                disabled={isScanning || !quickUrl.trim()}
+              >
                 <Code className="h-3.5 w-3.5 text-primary" /> Repo
               </Button>
-              <Button variant="outline" size="sm" className="gap-1.5 border-border text-foreground hover:bg-secondary text-xs h-8" onClick={() => startQuickScan("Smart Contract")}>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-1.5 border-border text-foreground hover:bg-secondary text-xs h-8" 
+                onClick={() => startQuickScan("contract")}
+                disabled={isScanning || !quickUrl.trim()}
+              >
                 <Shield className="h-3.5 w-3.5 text-accent" /> Smart Contract
               </Button>
             </div>
@@ -310,7 +369,7 @@ export default function ScansPage() {
         </CardContent>
       </Card>
 
-      {/* ── Agentic Mode panel ───────────────────────────── */}
+      {/* ── Agentic Mode panel ───────────────────────────────── */}
       <AnimatePresence>
         {agenticMode && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
@@ -343,14 +402,14 @@ export default function ScansPage() {
         )}
       </AnimatePresence>
 
-      {/* ── Tabs: Active / Results ───────────────────────── */}
+      {/* ── Tabs: Active / Results ───────────────────────────── */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="bg-secondary border border-border">
           <TabsTrigger value="active" className="gap-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground">
             <ScanLine className="h-3.5 w-3.5" />
             Active
-            {scans.length > 0 && (
-              <Badge variant="outline" className="ml-1 text-[10px] border-primary/30 text-primary h-4 px-1">{scans.length}</Badge>
+            {activeScans.length > 0 && (
+              <Badge variant="outline" className="ml-1 text-[10px] border-primary/30 text-primary h-4 px-1">{activeScans.length}</Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="results" className="gap-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground">
@@ -362,9 +421,9 @@ export default function ScansPage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* ── Active scans tab ─────────────────────────────── */}
+        {/* ── Active scans tab ─────────────────────────────────── */}
         <TabsContent value="active" className="mt-4">
-          {scans.length === 0 ? (
+          {activeScans.length === 0 ? (
             <Card className="bg-card border-border">
               <CardContent className="p-10 flex flex-col items-center justify-center text-center">
                 <ScanLine className="h-10 w-10 text-muted-foreground mb-3" />
@@ -374,51 +433,75 @@ export default function ScansPage() {
             </Card>
           ) : (
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              {scans.map((scan, i) => (
-                <motion.div key={scan.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ delay: i * 0.05 }}>
+              {activeScans.map((scan, i) => (
+                <motion.div
+                  key={scan.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ delay: i * 0.05 }}
+                >
                   <Card className="bg-card border-border overflow-hidden">
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-foreground font-mono">{scan.asset}</span>
-                          <Badge variant="outline" className={`text-[10px] ${assetTypeBadge[scan.assetType]}`}>{scan.assetType}</Badge>
-                          <Badge variant="outline" className={`text-[10px] ${toolColors[scan.tool] || "border-border text-muted-foreground"}`}>{scan.tool}</Badge>
+                          <div className={`flex h-8 w-8 items-center justify-center rounded-md ${scanTypeBadge[scan.type].bg}`}>
+                            <span className={scanTypeBadge[scan.type].text}>{scanTypeBadge[scan.type].icon}</span>
+                          </div>
+                          <div>
+                            <CardTitle className="text-sm font-semibold text-foreground truncate max-w-[180px]">
+                              {scan.target}
+                            </CardTitle>
+                            <p className="text-[10px] text-muted-foreground capitalize">{scan.type} scan</p>
+                          </div>
                         </div>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                onClick={() => { setScans((prev) => prev.filter((s) => s.id !== scan.id)); toast.info(`Scan cancelled for ${scan.asset}`) }}>
-                                <XCircle className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent className="bg-popover text-popover-foreground border-border">Cancel</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className="text-[11px] text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" />{scan.startedAt}</span>
-                        <span className="text-[11px] text-primary">{statusLabels[scan.status]}</span>
+                        <Badge variant="outline" className={`text-[10px] ${
+                          scan.status === "completed" ? "border-success/30 text-success" :
+                          scan.status === "failed" ? "border-destructive/30 text-destructive" :
+                          "border-primary/30 text-primary"
+                        }`}>
+                          {scan.status === "initializing" && "Initializing..."}
+                          {scan.status === "scanning" && "Scanning..."}
+                          {scan.status === "analyzing" && "Analyzing..."}
+                          {scan.status === "completed" && "Complete"}
+                          {scan.status === "failed" && "Failed"}
+                        </Badge>
                       </div>
                     </CardHeader>
-                    <CardContent className="pb-4">
-                      <div className="mb-3">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[11px] text-muted-foreground">Progress</span>
-                          <span className="text-[11px] font-mono text-primary">{Math.round(scan.progress)}%</span>
-                        </div>
-                        <Progress value={scan.progress} className="h-1.5 bg-secondary [&>div]:bg-primary" />
+                    <CardContent className="pt-0">
+                      <Progress value={scan.progress} className="h-1.5 mb-4" />
+                      
+                      {/* Real-time checks */}
+                      <div className="space-y-2">
+                        {scan.checks.map((check) => (
+                          <div key={check.id} className="flex items-center gap-2">
+                            {check.status === "pending" && (
+                              <div className="h-4 w-4 rounded-full border border-border" />
+                            )}
+                            {check.status === "running" && (
+                              <Loader2 className="h-4 w-4 text-primary animate-spin" />
+                            )}
+                            {check.status === "passed" && (
+                              <CheckCircle2 className="h-4 w-4 text-success" />
+                            )}
+                            {check.status === "warning" && (
+                              <AlertTriangle className="h-4 w-4 text-warning" />
+                            )}
+                            {check.status === "failed" && (
+                              <XCircle className="h-4 w-4 text-destructive" />
+                            )}
+                            <span className={`text-xs ${
+                              check.status === "running" ? "text-foreground" :
+                              check.status === "passed" ? "text-success" :
+                              check.status === "warning" ? "text-warning" :
+                              check.status === "failed" ? "text-destructive" :
+                              "text-muted-foreground"
+                            }`}>
+                              {check.name}
+                            </span>
+                          </div>
+                        ))}
                       </div>
-                      <ScrollArea className="h-[100px] rounded-lg bg-sidebar border border-border p-2.5">
-                        <div className="flex flex-col gap-0.5 font-mono text-[11px]">
-                          {scan.logs.map((log, idx) => (
-                            <div key={idx} className={log.includes("[WARN]") ? "text-warning" : log.includes("[DONE]") ? "text-success" : "text-muted-foreground"}>
-                              <Terminal className="inline h-3 w-3 mr-1" />{log}
-                            </div>
-                          ))}
-                          <div className="text-primary animate-pulse"><Terminal className="inline h-3 w-3 mr-1" />{"_"}</div>
-                        </div>
-                      </ScrollArea>
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -427,103 +510,211 @@ export default function ScansPage() {
           )}
         </TabsContent>
 
-        {/* ── Results tab ──────────────────────────────────── */}
+        {/* ── Results tab ──────────────────────────────────────── */}
         <TabsContent value="results" className="mt-4">
           {completedScans.length === 0 ? (
             <Card className="bg-card border-border">
               <CardContent className="p-10 flex flex-col items-center justify-center text-center">
                 <ShieldCheck className="h-10 w-10 text-muted-foreground mb-3" />
                 <h3 className="text-base font-semibold text-foreground mb-1">No Results Yet</h3>
-                <p className="text-sm text-muted-foreground max-w-sm">Completed scans will appear here with vulnerability findings and remediation code you can copy.</p>
+                <p className="text-sm text-muted-foreground max-w-sm">Completed scans will appear here with detailed findings.</p>
               </CardContent>
             </Card>
           ) : (
             <div className="flex flex-col gap-4">
-              {/* Summary bar */}
-              <div className="flex items-center gap-4 px-1">
-                <span className="text-sm text-muted-foreground">{completedScans.length} scan{completedScans.length !== 1 ? "s" : ""} completed</span>
-                <span className="text-xs text-muted-foreground">{totalFindings} finding{totalFindings !== 1 ? "s" : ""}</span>
-                {criticalFindings > 0 && (
-                  <Badge variant="outline" className={`text-[10px] ${severityBadge.critical}`}>{criticalFindings} Critical</Badge>
-                )}
-              </div>
-
-              {completedScans.map((scan) => (
-                <Card key={scan.id} className="bg-card border-success/20 overflow-hidden">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <ShieldCheck className="h-4 w-4 text-success shrink-0" />
-                        <span className="text-sm font-semibold text-foreground font-mono">{scan.asset}</span>
-                        <Badge variant="outline" className={`text-[10px] ${assetTypeBadge[scan.assetType]}`}>{scan.assetType}</Badge>
-                        <Badge variant="outline" className={`text-[10px] ${toolColors[scan.tool] || "border-border text-muted-foreground"}`}>{scan.tool}</Badge>
+              {completedScans.map((result, i) => (
+                <motion.div
+                  key={result.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                >
+                  <Card className="bg-card border-border overflow-hidden">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`flex h-8 w-8 items-center justify-center rounded-md ${scanTypeBadge[result.scanType as ScanType]?.bg || "bg-muted"}`}>
+                            <span className={scanTypeBadge[result.scanType as ScanType]?.text || "text-muted-foreground"}>
+                              {scanTypeBadge[result.scanType as ScanType]?.icon || <Globe className="h-3.5 w-3.5" />}
+                            </span>
+                          </div>
+                          <div>
+                            <CardTitle className="text-sm font-semibold text-foreground">{result.target}</CardTitle>
+                            <p className="text-[10px] text-muted-foreground">
+                              Scanned {new Date(result.completedAt).toLocaleString()} | {result.duration}ms
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {/* Summary badges */}
+                          {result.summary?.critical > 0 && (
+                            <Badge variant="outline" className="text-[10px] border-destructive/30 text-destructive">
+                              {result.summary.critical} Critical
+                            </Badge>
+                          )}
+                          {result.summary?.high > 0 && (
+                            <Badge variant="outline" className="text-[10px] border-warning/30 text-warning">
+                              {result.summary.high} High
+                            </Badge>
+                          )}
+                          {result.summary?.total === 0 && (
+                            <Badge variant="outline" className="text-[10px] border-success/30 text-success">
+                              No Issues
+                            </Badge>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0"
+                            onClick={() => setExpandedResults(prev => ({ ...prev, [result.id]: !prev[result.id] }))}
+                          >
+                            {expandedResults[result.id] ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
-                      <Button variant="ghost" size="sm" className="gap-1 text-xs text-muted-foreground hover:text-foreground shrink-0"
-                        onClick={() => setExpandedResults((prev) => ({ ...prev, [scan.id]: !prev[scan.id] }))}>
-                        {scan.findings.length} finding{scan.findings.length !== 1 ? "s" : ""}
-                        {expandedResults[scan.id] ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                      </Button>
-                    </div>
-                    <div className="flex items-center gap-3 mt-1">
-                      <span className="text-[11px] text-muted-foreground">Completed {scan.completedAt}</span>
-                      <div className="flex gap-1">
-                        {(["critical", "high", "medium"] as Severity[]).map((sev) => {
-                          const count = scan.findings.filter((f) => f.severity === sev).length
-                          return count > 0 ? (
-                            <Badge key={sev} variant="outline" className={`text-[10px] ${severityBadge[sev]}`}>{count} {sev.charAt(0).toUpperCase() + sev.slice(1)}</Badge>
-                          ) : null
-                        })}
-                      </div>
-                    </div>
-                  </CardHeader>
-
-                  <AnimatePresence>
-                    {expandedResults[scan.id] && (
-                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}>
-                        <CardContent className="pt-0 pb-4 flex flex-col gap-3">
-                          {scan.findings.map((finding) => (
-                            <div key={finding.id} className="rounded-lg border border-border bg-secondary/30 overflow-hidden">
-                              <div className="flex items-start justify-between p-3 pb-2">
-                                <div className="flex items-start gap-2">
-                                  <AlertTriangle className={`h-4 w-4 mt-0.5 shrink-0 ${finding.severity === "critical" ? "text-destructive" : finding.severity === "high" ? "text-warning" : "text-primary"}`} />
-                                  <div>
-                                    <p className="text-sm font-medium text-foreground">{finding.title}</p>
-                                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{finding.description}</p>
-                                    {finding.file !== "N/A" && (
-                                      <p className="text-[11px] text-muted-foreground font-mono mt-1">
-                                        <FileCode className="inline h-3 w-3 mr-1" />{finding.file}{finding.line > 0 ? `:${finding.line}` : ""}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                                <Badge variant="outline" className={`text-[10px] shrink-0 ${severityBadge[finding.severity]}`}>{finding.severity.toUpperCase()}</Badge>
+                    </CardHeader>
+                    
+                    <AnimatePresence>
+                      {expandedResults[result.id] && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                        >
+                          <CardContent className="pt-0 border-t border-border">
+                            {result.findings?.length === 0 ? (
+                              <div className="py-6 text-center">
+                                <CheckCircle2 className="h-8 w-8 text-success mx-auto mb-2" />
+                                <p className="text-sm text-muted-foreground">No vulnerabilities detected</p>
                               </div>
-                              <div className="border-t border-border">
-                                <div className="flex items-center justify-between px-3 py-2 bg-background/50">
-                                  <span className="text-[11px] font-medium text-success flex items-center gap-1.5">
-                                    <ShieldCheck className="h-3 w-3" />Remediation Code
-                                  </span>
-                                  <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-                                    onClick={() => copyCode(finding.fix, finding.id)}>
-                                    {copiedId === finding.id ? (<><Check className="h-3 w-3 text-success" />Copied</>) : (<><Copy className="h-3 w-3" />Copy Fix</>)}
-                                  </Button>
+                            ) : (
+                              <ScrollArea className="max-h-[400px]">
+                                <div className="space-y-3 py-3">
+                                  {result.findings?.map((finding) => (
+                                    <div key={finding.id} className="p-3 rounded-lg border border-border bg-secondary/30">
+                                      <div className="flex items-start justify-between gap-2 mb-2">
+                                        <div className="flex items-center gap-2">
+                                          <AlertTriangle className={`h-4 w-4 shrink-0 ${
+                                            finding.severity === "critical" ? "text-destructive" :
+                                            finding.severity === "high" ? "text-warning" :
+                                            "text-muted-foreground"
+                                          }`} />
+                                          <span className="text-sm font-medium text-foreground">{finding.title}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <Badge variant="outline" className={`text-[10px] uppercase ${severityBadge[finding.severity]}`}>
+                                            {finding.severity}
+                                          </Badge>
+                                          <Badge variant="outline" className="text-[10px] border-border text-muted-foreground">
+                                            CVSS {finding.cvss}
+                                          </Badge>
+                                        </div>
+                                      </div>
+                                      <p className="text-xs text-muted-foreground mb-2">{finding.description}</p>
+                                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                        <FileCode className="h-3 w-3" />
+                                        <span className="font-mono">{finding.location}</span>
+                                      </div>
+                                      
+                                      {/* Remediation */}
+                                      {finding.remediation && (
+                                        <div className="mt-3 p-2 rounded bg-background border border-border">
+                                          <div className="flex items-center justify-between mb-1">
+                                            <span className="text-[10px] font-semibold text-success">Fix: {finding.remediation.title}</span>
+                                            {finding.remediation.code && (
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-5 px-1.5 text-[10px]"
+                                                onClick={() => copyCode(finding.remediation.code!, finding.id)}
+                                              >
+                                                {copiedId === finding.id ? (
+                                                  <Check className="h-3 w-3 mr-1" />
+                                                ) : (
+                                                  <Copy className="h-3 w-3 mr-1" />
+                                                )}
+                                                Copy
+                                              </Button>
+                                            )}
+                                          </div>
+                                          {finding.remediation.code && (
+                                            <pre className="text-[10px] font-mono text-muted-foreground overflow-x-auto whitespace-pre-wrap max-h-[100px]">
+                                              {finding.remediation.code.slice(0, 300)}
+                                              {finding.remediation.code.length > 300 && "..."}
+                                            </pre>
+                                          )}
+                                          {finding.remediation.reference && (
+                                            <a
+                                              href={finding.remediation.reference}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline mt-1"
+                                            >
+                                              <ExternalLink className="h-3 w-3" />
+                                              Reference
+                                            </a>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
                                 </div>
-                                <ScrollArea className="max-h-[180px]">
-                                  <pre className="p-3 text-xs font-mono text-foreground/90 bg-sidebar overflow-x-auto whitespace-pre">{finding.fix}</pre>
-                                </ScrollArea>
-                              </div>
-                            </div>
-                          ))}
-                        </CardContent>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </Card>
+                              </ScrollArea>
+                            )}
+                          </CardContent>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </Card>
+                </motion.div>
               ))}
             </div>
           )}
         </TabsContent>
       </Tabs>
+
+      {/* ── Summary Stats ────────────────────────────────────── */}
+      {completedScans.length > 0 && (
+        <Card className="bg-card border-border">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-6">
+                <div>
+                  <p className="text-xs text-muted-foreground">Total Scans</p>
+                  <p className="text-xl font-bold text-foreground">{completedScans.length}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Findings</p>
+                  <p className="text-xl font-bold text-foreground">{totalFindings}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Critical</p>
+                  <p className={`text-xl font-bold ${criticalFindings > 0 ? "text-destructive" : "text-success"}`}>
+                    {criticalFindings}
+                  </p>
+                </div>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-1.5"
+                onClick={() => {
+                  setCompletedScans([])
+                  setExpandedResults({})
+                  toast.success("Scan history cleared")
+                }}
+              >
+                <X className="h-3.5 w-3.5" />
+                Clear History
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
