@@ -4,7 +4,7 @@
 
 import type { Finding, ScanResult, ScanOptions, DetectedStack } from "@/lib/types"
 import { getOWASPCategory, severityFromCVSS, cvssFromSeverity, calculateRiskScore } from "./scoring"
-import { getRemediation } from "./remediation"
+import { getRemediation, getStackAwareRemediation } from "./remediation"
 
 const TIMEOUT = 10000
 
@@ -379,7 +379,7 @@ async function detectTechStack(url: string): Promise<{ stack: DetectedStack; fin
   return { stack, findings }
 }
 
-/* ── Cookie Security Check ──────────────────────────────────── */
+/* ── Cookie Security Check ───────────────────��──────────────── */
 async function checkCookies(url: string): Promise<Finding[]> {
   const findings: Finding[] = []
   
@@ -455,7 +455,7 @@ async function checkCookies(url: string): Promise<Finding[]> {
 /* ── Main Scanner ───────────────────────────────────────────── */
 export async function scanWebsite(url: string, options: ScanOptions = {}): Promise<ScanResult> {
   const startTime = Date.now()
-  const findings: Finding[] = []
+  let findings: Finding[] = []
   
   // Normalize URL
   let targetUrl = url
@@ -464,8 +464,9 @@ export async function scanWebsite(url: string, options: ScanOptions = {}): Promi
   }
   
   try {
-    // Run tech stack detection first (also returns findings for stack-specific issues)
+    // Run tech stack detection FIRST to get stack info
     const techStackResult = await detectTechStack(targetUrl)
+    const detectedStack = techStackResult.stack
     findings.push(...techStackResult.findings)
     
     // Run all checks in parallel
@@ -482,6 +483,18 @@ export async function scanWebsite(url: string, options: ScanOptions = {}): Promi
         findings.push(...result.value)
       }
     }
+    
+    // Update all findings with stack-aware remediation
+    findings = findings.map(finding => {
+      // Extract the finding type from the ID (e.g., "WEB-missing-csp-123" -> "missing-csp")
+      const idParts = finding.id.split("-")
+      const findingType = idParts.slice(1, -1).join("-") // Remove prefix and timestamp
+      
+      return {
+        ...finding,
+        remediation: getStackAwareRemediation(findingType, detectedStack),
+      }
+    })
     
     // Filter by options
     const filteredFindings = options.includeInfo 
@@ -509,7 +522,7 @@ export async function scanWebsite(url: string, options: ScanOptions = {}): Promi
       findings: filteredFindings,
       summary,
       metadata: {
-        detectedStack: techStackResult.stack,
+        detectedStack,
       },
     }
     

@@ -549,6 +549,15 @@ const scanIdRef = useRef(0)
                             <CardTitle className="text-sm font-semibold text-foreground">{result.target}</CardTitle>
                             <p className="text-[10px] text-muted-foreground">
                               Scanned {new Date(result.completedAt).toLocaleString()} | {result.duration}ms
+                              {result.metadata?.detectedStack && (
+                                <span className="ml-2 text-primary">
+                                  Stack: {[
+                                    result.metadata.detectedStack.framework,
+                                    result.metadata.detectedStack.cms,
+                                    result.metadata.detectedStack.server
+                                  ].filter(Boolean).join(" + ") || "Unknown"}
+                                </span>
+                              )}
                             </p>
                           </div>
                         </div>
