@@ -64,6 +64,31 @@ X-Frame-Options: SAMEORIGIN`,
     reference: "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options"
   },
 
+  "missing-referrer-policy": {
+    title: "Add Referrer-Policy Header",
+    description: "Controls how much referrer information is sent with requests, preventing data leakage.",
+    code: `// Recommended: Don't send referrer to other origins
+Referrer-Policy: strict-origin-when-cross-origin
+
+// Or more strict
+Referrer-Policy: no-referrer`,
+    reference: "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy"
+  },
+
+  "missing-permissions-policy": {
+    title: "Add Permissions-Policy Header",
+    description: "Controls which browser features can be used, reducing attack surface.",
+    code: `// Disable unnecessary features
+Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
+
+// Express.js
+app.use((req, res, next) => {
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});`,
+    reference: "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy"
+  },
+
   /* ── TLS/SSL Issues ───────────────────────────────────────── */
   "weak-tls": {
     title: "Upgrade to TLS 1.2 or Higher",
@@ -352,6 +377,54 @@ const authLimiter = rateLimit({
 
 app.post('/api/login', authLimiter, loginHandler);`,
     reference: "https://cheatsheetseries.owasp.org/cheatsheets/Denial_of_Service_Cheat_Sheet.html"
+  },
+
+  /* ── Missing Security Files ───────────────────────────────── */
+  "missing-gitignore": {
+    title: "Add .gitignore File",
+    description: "Without .gitignore, sensitive files like .env, node_modules, and IDE configs may be accidentally committed.",
+    code: `# Create .gitignore with common exclusions
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Build
+dist/
+build/
+.next/
+
+# IDE
+.idea/
+.vscode/
+*.swp`,
+    reference: "https://github.com/github/gitignore"
+  },
+
+  "missing-security-txt": {
+    title: "Add security.txt File",
+    description: "security.txt helps security researchers know how to report vulnerabilities responsibly.",
+    code: `# Create /.well-known/security.txt
+Contact: mailto:security@yourdomain.com
+Expires: 2025-12-31T23:59:00.000Z
+Preferred-Languages: en
+Canonical: https://yourdomain.com/.well-known/security.txt`,
+    reference: "https://securitytxt.org/"
+  },
+
+  "exposed-swagger": {
+    title: "Protect API Documentation",
+    description: "Public API documentation reveals endpoints and parameters that attackers can exploit.",
+    code: `// Protect swagger in production
+if (process.env.NODE_ENV === 'production') {
+  app.use('/api-docs', requireAuth);
+  app.use('/swagger', requireAuth);
+}`,
+    reference: "https://swagger.io/docs/specification/authentication/"
   },
 
   /* ── DNS/Email Security ───────────────────────────────────── */
