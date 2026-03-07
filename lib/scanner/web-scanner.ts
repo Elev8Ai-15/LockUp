@@ -2,7 +2,7 @@
    Website Security Scanner - HTTP-based checks
    ════════════════════════════════════════════════════════════ */
 
-import type { Finding, ScanResult, ScanOptions } from "@/lib/types"
+import type { Finding, ScanResult, ScanOptions, DetectedStack } from "@/lib/types"
 import { getOWASPCategory, severityFromCVSS, cvssFromSeverity, calculateRiskScore } from "./scoring"
 import { getRemediation } from "./remediation"
 
@@ -270,14 +270,6 @@ async function checkCORS(url: string): Promise<Finding[]> {
 }
 
 /* ── Tech Stack Detection ───────────────────────────────────── */
-interface DetectedStack {
-  framework: string | null
-  server: string | null
-  language: string | null
-  cms: string | null
-  cdn: string | null
-}
-
 async function detectTechStack(url: string): Promise<{ stack: DetectedStack; findings: Finding[] }> {
   const stack: DetectedStack = {
     framework: null,
@@ -472,6 +464,10 @@ export async function scanWebsite(url: string, options: ScanOptions = {}): Promi
   }
   
   try {
+    // Run tech stack detection first (also returns findings for stack-specific issues)
+    const techStackResult = await detectTechStack(targetUrl)
+    findings.push(...techStackResult.findings)
+    
     // Run all checks in parallel
     const results = await Promise.allSettled([
       checkSecurityHeaders(targetUrl),
@@ -512,6 +508,9 @@ export async function scanWebsite(url: string, options: ScanOptions = {}): Promi
       status: "completed",
       findings: filteredFindings,
       summary,
+      metadata: {
+        detectedStack: techStackResult.stack,
+      },
     }
     
   } catch (error) {
