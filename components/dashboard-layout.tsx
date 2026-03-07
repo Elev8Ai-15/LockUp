@@ -1,9 +1,15 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
-import { TopNavbar } from "@/components/top-navbar"
 import { Toaster } from "sonner"
+
+// Dynamic import with SSR disabled to prevent Radix ID hydration mismatch
+const TopNavbar = dynamic(
+  () => import("@/components/top-navbar").then((mod) => mod.TopNavbar),
+  { ssr: false }
+)
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (

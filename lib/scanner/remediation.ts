@@ -29,6 +29,7 @@ function detectStackType(stack: DetectedStack | null): StackType {
   if (server.includes("nginx")) return "nginx"
   if (server.includes("apache")) return "apache"
   
+  if (framework.includes("genspark") || framework.includes("netlify") || cdn.includes("netlify") || framework.includes("static") || framework.includes("html")) return "netlify"
   return "generic"
 }
 
