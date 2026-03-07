@@ -2,12 +2,16 @@
 
 import dynamic from "next/dynamic"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/app-sidebar"
 import { Toaster } from "sonner"
 
-// Dynamic import with SSR disabled to prevent Radix ID hydration mismatch
+// Dynamic imports with SSR disabled to prevent Radix ID hydration mismatch
 const TopNavbar = dynamic(
   () => import("@/components/top-navbar").then((mod) => mod.TopNavbar),
+  { ssr: false }
+)
+
+const AppSidebar = dynamic(
+  () => import("@/components/app-sidebar").then((mod) => mod.AppSidebar),
   { ssr: false }
 )
 
