@@ -269,6 +269,124 @@ async function checkCORS(url: string): Promise<Finding[]> {
   return findings
 }
 
+/* ── Tech Stack Detection ───────────────────────────────────── */
+interface DetectedStack {
+  framework: string | null
+  server: string | null
+  language: string | null
+  cms: string | null
+  cdn: string | null
+}
+
+async function detectTechStack(url: string): Promise<{ stack: DetectedStack; findings: Finding[] }> {
+  const stack: DetectedStack = {
+    framework: null,
+    server: null,
+    language: null,
+    cms: null,
+    cdn: null,
+  }
+  const findings: Finding[] = []
+  
+  try {
+    const response = await fetchWithTimeout(url)
+    const headers = response.headers
+    const html = await response.text()
+    
+    // Detect from headers
+    const server = headers.get("server")
+    const poweredBy = headers.get("x-powered-by")
+    const via = headers.get("via")
+    
+    if (server) {
+      stack.server = server
+      if (server.toLowerCase().includes("nginx")) stack.server = "nginx"
+      if (server.toLowerCase().includes("apache")) stack.server = "Apache"
+      if (server.toLowerCase().includes("cloudflare")) { stack.server = "Cloudflare"; stack.cdn = "Cloudflare" }
+    }
+    
+    if (poweredBy) {
+      if (poweredBy.toLowerCase().includes("express")) stack.framework = "Express.js"
+      if (poweredBy.toLowerCase().includes("php")) stack.language = "PHP"
+      if (poweredBy.toLowerCase().includes("asp.net")) stack.framework = "ASP.NET"
+      if (poweredBy.toLowerCase().includes("next")) stack.framework = "Next.js"
+    }
+    
+    // Detect CDN
+    if (headers.get("x-vercel-id")) stack.cdn = "Vercel"
+    if (headers.get("x-amz-cf-id")) stack.cdn = "CloudFront"
+    if (headers.get("cf-ray")) stack.cdn = "Cloudflare"
+    if (via?.includes("cloudfront")) stack.cdn = "CloudFront"
+    
+    // Detect from HTML content
+    if (html.includes("__NEXT_DATA__") || html.includes("/_next/")) stack.framework = "Next.js"
+    if (html.includes("__NUXT__") || html.includes("/_nuxt/")) stack.framework = "Nuxt.js"
+    if (html.includes("ng-app") || html.includes("ng-controller")) stack.framework = "Angular"
+    if (html.includes("data-reactroot") || html.includes("__REACT_")) stack.framework = "React"
+    if (html.includes("data-v-") || html.includes("Vue.js")) stack.framework = "Vue.js"
+    if (html.includes("wp-content") || html.includes("wp-includes")) { stack.cms = "WordPress"; stack.language = "PHP" }
+    if (html.includes("drupal") || html.includes("Drupal.settings")) { stack.cms = "Drupal"; stack.language = "PHP" }
+    if (html.includes("joomla") || html.includes("Joomla!")) { stack.cms = "Joomla"; stack.language = "PHP" }
+    if (html.includes("shopify") || html.includes("myshopify.com")) stack.cms = "Shopify"
+    if (html.includes("wix.com") || html.includes("wixstatic")) stack.cms = "Wix"
+    if (html.includes("squarespace")) stack.cms = "Squarespace"
+    
+    // Framework-specific vulnerability hints
+    if (stack.cms === "WordPress") {
+      // Check for outdated WordPress version
+      const wpVersionMatch = html.match(/WordPress\s*([\d.]+)/i) || html.match(/ver=([\d.]+).*wp-/)
+      if (wpVersionMatch) {
+        const version = wpVersionMatch[1]
+        if (version && parseFloat(version) < 6.0) {
+          findings.push({
+            id: `WEB-outdated-wordpress-${Date.now()}`,
+            title: `Outdated WordPress Version (${version})`,
+            severity: "high",
+            cvss: 8.1,
+            owasp: getOWASPCategory("outdated-software"),
+            type: "Web",
+            description: `WordPress ${version} is outdated and may contain known vulnerabilities.`,
+            impact: "Known CVEs may allow remote code execution or data theft.",
+            location: url,
+            evidence: `Detected WordPress version: ${version}`,
+            remediation: getRemediation("outdated-software"),
+            detectedAt: new Date().toISOString(),
+            status: "open",
+          })
+        }
+      }
+    }
+    
+    if (stack.framework === "Next.js") {
+      // Check for exposed _next/static source maps
+      try {
+        const sourceMapCheck = await fetchWithTimeout(`${url}/_next/static/chunks/main.js.map`, { method: "HEAD" })
+        if (sourceMapCheck.status === 200) {
+          findings.push({
+            id: `WEB-exposed-sourcemaps-${Date.now()}`,
+            title: "Source Maps Exposed in Production",
+            severity: "low",
+            cvss: 3.1,
+            owasp: getOWASPCategory("server-disclosure"),
+            type: "Web",
+            description: "JavaScript source maps are publicly accessible.",
+            impact: "Attackers can reverse-engineer your client-side code.",
+            location: `${url}/_next/static/chunks/main.js.map`,
+            remediation: getRemediation("server-disclosure"),
+            detectedAt: new Date().toISOString(),
+            status: "open",
+          })
+        }
+      } catch { /* Not exposed - good */ }
+    }
+    
+  } catch (error) {
+    // Detection failed
+  }
+  
+  return { stack, findings }
+}
+
 /* ── Cookie Security Check ──────────────────────────────────── */
 async function checkCookies(url: string): Promise<Finding[]> {
   const findings: Finding[] = []
