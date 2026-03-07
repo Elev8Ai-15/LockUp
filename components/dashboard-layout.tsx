@@ -1,31 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { TopNavbar } from "@/components/top-navbar"
 import { Toaster } from "sonner"
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
-  // Prevent hydration mismatch by only rendering Radix components on client
-  const [mounted, setMounted] = useState(false)
-  
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-  
-  // Show a minimal loading state during SSR to avoid hydration mismatch
-  if (!mounted) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Loading LockUp...</p>
-        </div>
-      </div>
-    )
-  }
-  
   return (
     <SidebarProvider>
       <AppSidebar />
