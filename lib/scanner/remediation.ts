@@ -5,7 +5,7 @@
 
 import type { RemediationStep, DetectedStack } from "@/lib/types"
 
-type StackType = "nextjs" | "express" | "react" | "vue" | "angular" | "wordpress" | "django" | "rails" | "laravel" | "nginx" | "apache" | "vercel" | "cloudflare" | "generic"
+type StackType = "nextjs" | "express" | "react" | "vue" | "angular" | "wordpress" | "django" | "rails" | "laravel" | "nginx" | "apache" | "vercel" | "cloudflare" | "netlify" | "generic"
 
 function detectStackType(stack: DetectedStack | null): StackType {
   if (!stack) return "generic"
@@ -15,21 +15,32 @@ function detectStackType(stack: DetectedStack | null): StackType {
   const cms = stack.cms?.toLowerCase() || ""
   const cdn = stack.cdn?.toLowerCase() || ""
   
+  // Framework detection (most specific first)
   if (framework.includes("next")) return "nextjs"
+  if (framework.includes("django")) return "django"
+  if (framework.includes("rails") || framework.includes("ruby")) return "rails"
+  if (framework.includes("laravel")) return "laravel"
   if (framework.includes("express")) return "express"
-  if (framework.includes("react")) return "react"
   if (framework.includes("vue") || framework.includes("nuxt")) return "vue"
   if (framework.includes("angular")) return "angular"
-  if (framework.includes("django")) return "django"
-  if (framework.includes("rails")) return "rails"
-  if (framework.includes("laravel")) return "laravel"
+  if (framework.includes("react")) return "react"
+  
+  // CMS detection
   if (cms.includes("wordpress")) return "wordpress"
+  if (cms.includes("genspark")) return "netlify" // Genspark uses static hosting
+  if (cms.includes("wix") || cms.includes("squarespace") || cms.includes("webflow")) return "netlify"
+  
+  // CDN/Hosting detection
+  if (cdn.includes("netlify")) return "netlify"
   if (cdn.includes("vercel")) return "vercel"
   if (cdn.includes("cloudflare")) return "cloudflare"
-  if (server.includes("nginx")) return "nginx"
-  if (server.includes("apache")) return "apache"
   
-  return "generic"
+  // Server detection (for WordPress on Apache)
+  if (server.includes("apache")) return "apache"
+  if (server.includes("nginx")) return "nginx"
+  
+  // Static HTML sites default to netlify format (most portable)
+  return "netlify"
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -95,6 +106,17 @@ app.use((req, res, next) => {
     }
   ]
 }`,
+    netlify: `# Create _headers file in your publish directory (or site root)
+# Netlify _headers file format
+
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:;
+
+# Or in netlify.toml:
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;"`,
     cloudflare: `// Cloudflare Worker or Page Rule
 // Add Transform Rule in Cloudflare Dashboard:
 // 1. Go to Rules > Transform Rules > Modify Response Header
@@ -266,6 +288,15 @@ app.use((req, res, next) => {
     }
   ]
 }`,
+    netlify: `# _headers file in your publish directory
+/*
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+
+# Or in netlify.toml:
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"`,
     cloudflare: `// Cloudflare Dashboard:
 // SSL/TLS > Edge Certificates > Enable "Always Use HTTPS"
 // SSL/TLS > Edge Certificates > Enable HSTS
@@ -342,6 +373,15 @@ app.use((req, res, next) => {
     }
   ]
 }`,
+    netlify: `# _headers file
+/*
+  X-Frame-Options: DENY
+
+# Or in netlify.toml:
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"`,
     cloudflare: `// Cloudflare Transform Rules
 // Add response header: X-Frame-Options = DENY`,
     nginx: `add_header X-Frame-Options "DENY" always;`,
@@ -360,6 +400,202 @@ config.action_dispatch.default_headers['X-Frame-Options'] = 'DENY'`,
     vue: `// Configure at hosting/server level`,
     angular: `// Configure at server level`,
     generic: `X-Frame-Options: DENY`
+  },
+
+  "missing-x-content-type-options": {
+    nextjs: `// next.config.mjs
+const securityHeaders = [
+  { key: 'X-Content-Type-Options', value: 'nosniff' }
+];
+
+const nextConfig = {
+  async headers() {
+    return [{ source: '/:path*', headers: securityHeaders }];
+  },
+};
+
+export default nextConfig;`,
+    express: `const helmet = require('helmet');
+app.use(helmet.noSniff());
+
+// Or manually:
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  next();
+});`,
+    vercel: `// vercel.json
+{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [{ "key": "X-Content-Type-Options", "value": "nosniff" }]
+    }
+  ]
+}`,
+    netlify: `# _headers file
+/*
+  X-Content-Type-Options: nosniff
+
+# Or in netlify.toml:
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"`,
+    cloudflare: `// Cloudflare Transform Rules
+// Add response header: X-Content-Type-Options = nosniff`,
+    nginx: `add_header X-Content-Type-Options "nosniff" always;`,
+    apache: `Header always set X-Content-Type-Options "nosniff"`,
+    wordpress: `// functions.php
+function add_content_type_options() {
+    header('X-Content-Type-Options: nosniff');
+}
+add_action('send_headers', 'add_content_type_options');`,
+    django: `# Django sets this by default when SecurityMiddleware is enabled
+# settings.py
+SECURE_CONTENT_TYPE_NOSNIFF = True`,
+    rails: `# config/application.rb
+config.action_dispatch.default_headers['X-Content-Type-Options'] = 'nosniff'`,
+    laravel: `$response->headers->set('X-Content-Type-Options', 'nosniff');`,
+    react: `// Configure at hosting level (Vercel, Netlify, etc.)`,
+    vue: `// Configure at hosting/server level`,
+    angular: `// Configure at server level`,
+    generic: `X-Content-Type-Options: nosniff`
+  },
+
+  "missing-referrer-policy": {
+    nextjs: `// next.config.mjs
+const securityHeaders = [
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' }
+];
+
+const nextConfig = {
+  async headers() {
+    return [{ source: '/:path*', headers: securityHeaders }];
+  },
+};
+
+export default nextConfig;`,
+    express: `const helmet = require('helmet');
+app.use(helmet.referrerPolicy({ policy: 'strict-origin-when-cross-origin' }));
+
+// Or manually:
+app.use((req, res, next) => {
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});`,
+    vercel: `// vercel.json
+{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [{ "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }]
+    }
+  ]
+}`,
+    netlify: `# _headers file
+/*
+  Referrer-Policy: strict-origin-when-cross-origin
+
+# Or in netlify.toml:
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Referrer-Policy = "strict-origin-when-cross-origin"`,
+    cloudflare: `// Cloudflare Transform Rules
+// Add response header: Referrer-Policy = strict-origin-when-cross-origin`,
+    nginx: `add_header Referrer-Policy "strict-origin-when-cross-origin" always;`,
+    apache: `Header always set Referrer-Policy "strict-origin-when-cross-origin"`,
+    wordpress: `// functions.php
+function add_referrer_policy() {
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+}
+add_action('send_headers', 'add_referrer_policy');`,
+    django: `# settings.py
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'`,
+    rails: `# config/application.rb
+config.action_dispatch.default_headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'`,
+    laravel: `$response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');`,
+    react: `// Configure at hosting level`,
+    vue: `// Configure at hosting/server level`,
+    angular: `// Configure at server level`,
+    generic: `Referrer-Policy: strict-origin-when-cross-origin`
+  },
+
+  "missing-permissions-policy": {
+    nextjs: `// next.config.mjs
+const securityHeaders = [
+  { 
+    key: 'Permissions-Policy', 
+    value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()'
+  }
+];
+
+const nextConfig = {
+  async headers() {
+    return [{ source: '/:path*', headers: securityHeaders }];
+  },
+};
+
+export default nextConfig;`,
+    express: `const helmet = require('helmet');
+app.use(helmet.permittedCrossDomainPolicies());
+
+// Manual Permissions-Policy:
+app.use((req, res, next) => {
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), interest-cohort=()');
+  next();
+});`,
+    vercel: `// vercel.json
+{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { 
+          "key": "Permissions-Policy", 
+          "value": "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+        }
+      ]
+    }
+  ]
+}`,
+    netlify: `# _headers file
+/*
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
+
+# Or in netlify.toml:
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), interest-cohort=()"`,
+    cloudflare: `// Cloudflare Transform Rules
+// Add response header: Permissions-Policy = camera=(), microphone=(), geolocation=()`,
+    nginx: `add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()" always;`,
+    apache: `Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()"`,
+    wordpress: `// functions.php
+function add_permissions_policy() {
+    header('Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()');
+}
+add_action('send_headers', 'add_permissions_policy');`,
+    django: `# Use django-permissions-policy package
+# pip install django-permissions-policy
+PERMISSIONS_POLICY = {
+    "camera": [],
+    "microphone": [],
+    "geolocation": [],
+    "interest-cohort": [],
+}`,
+    rails: `# config/initializers/permissions_policy.rb
+Rails.application.config.permissions_policy do |policy|
+  policy.camera      :none
+  policy.microphone  :none
+  policy.geolocation :none
+end`,
+    laravel: `$response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), interest-cohort=()');`,
+    react: `// Configure at hosting level`,
+    vue: `// Configure at hosting/server level`,
+    angular: `// Configure at server level`,
+    generic: `Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()`
   },
 
   "cors-wildcard": {
@@ -416,6 +652,28 @@ app.use(cors({
     }
   ]
 }`,
+    netlify: `# _headers file - Netlify doesn't support dynamic origin
+# For static origins only:
+/api/*
+  Access-Control-Allow-Origin: https://yourdomain.com
+  Access-Control-Allow-Credentials: true
+  Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+
+# For dynamic CORS, use Netlify Functions:
+// netlify/functions/api.js
+exports.handler = async (event) => {
+  const allowedOrigins = ['https://yourdomain.com'];
+  const origin = event.headers.origin;
+  
+  return {
+    statusCode: 200,
+    headers: {
+      'Access-Control-Allow-Origin': allowedOrigins.includes(origin) ? origin : '',
+      'Access-Control-Allow-Credentials': 'true',
+    },
+    body: JSON.stringify({ data: 'response' })
+  };
+};`,
     cloudflare: `// Cloudflare Worker for dynamic CORS
 addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request));
@@ -532,6 +790,19 @@ res.cookie('session', token, {
 });`,
     vercel: `// Cookies set via API routes should use secure flags
 // See Next.js example above`,
+    netlify: `// Netlify Functions - secure cookie example
+// netlify/functions/auth.js
+exports.handler = async (event) => {
+  const token = generateSessionToken();
+  
+  return {
+    statusCode: 200,
+    headers: {
+      'Set-Cookie': \`session=\${token}; HttpOnly; Secure; SameSite=Strict; Max-Age=86400; Path=/\`
+    },
+    body: JSON.stringify({ success: true })
+  };
+};`,
     cloudflare: `// Cloudflare Workers
 const cookie = \`session=\${token}; HttpOnly; Secure; SameSite=Strict; Max-Age=86400; Path=/\`;
 return new Response(body, {

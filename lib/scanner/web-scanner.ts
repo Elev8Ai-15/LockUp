@@ -304,11 +304,13 @@ async function detectTechStack(url: string): Promise<{ stack: DetectedStack; fin
       if (poweredBy.toLowerCase().includes("next")) stack.framework = "Next.js"
     }
     
-    // Detect CDN
+    // Detect CDN/Hosting Platform
     if (headers.get("x-vercel-id")) stack.cdn = "Vercel"
+    if (headers.get("x-nf-request-id") || headers.get("x-netlify-request-id")) stack.cdn = "Netlify"
     if (headers.get("x-amz-cf-id")) stack.cdn = "CloudFront"
     if (headers.get("cf-ray")) stack.cdn = "Cloudflare"
     if (via?.includes("cloudfront")) stack.cdn = "CloudFront"
+    if (server?.toLowerCase().includes("netlify")) stack.cdn = "Netlify"
     
     // Detect from HTML content
     if (html.includes("__NEXT_DATA__") || html.includes("/_next/")) stack.framework = "Next.js"

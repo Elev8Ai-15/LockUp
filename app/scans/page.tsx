@@ -549,19 +549,20 @@ const scanIdRef = useRef(0)
                             <CardTitle className="text-sm font-semibold text-foreground">{result.target}</CardTitle>
                             <p className="text-[10px] text-muted-foreground">
                               Scanned {new Date(result.completedAt).toLocaleString()} | {result.duration}ms
-                              {result.metadata?.detectedStack && (
-                                <span className="ml-2 text-primary">
-                                  Stack: {[
-                                    result.metadata.detectedStack.framework,
-                                    result.metadata.detectedStack.cms,
-                                    result.metadata.detectedStack.server
-                                  ].filter(Boolean).join(" + ") || "Unknown"}
-                                </span>
-                              )}
                             </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
+                          {/* Tech Stack Badge */}
+                          {result.metadata?.detectedStack && (
+                            <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-primary/20">
+                              {[
+                                result.metadata.detectedStack.framework,
+                                result.metadata.detectedStack.cms,
+                                result.metadata.detectedStack.cdn || result.metadata.detectedStack.server
+                              ].filter(Boolean).join(" + ") || "Static HTML"}
+                            </Badge>
+                          )}
                           {/* Summary badges */}
                           {result.summary?.critical > 0 && (
                             <Badge variant="outline" className="text-[10px] border-destructive/30 text-destructive">
