@@ -631,11 +631,11 @@ const scanIdRef = useRef(0)
                           {/* Tech Stack Badge */}
                           {result.metadata?.detectedStack && (
                             <Badge variant="blue" className="text-[10px]">
-                              {[
+                              {String([
                                 result.metadata.detectedStack.framework,
                                 result.metadata.detectedStack.cms,
                                 result.metadata.detectedStack.cdn || result.metadata.detectedStack.server
-                              ].filter(Boolean).join(" + ") || "Static HTML"}
+                              ].filter(Boolean).join(" + ") || "Static HTML")}
                             </Badge>
                           )}
                           {/* Summary badges */}
