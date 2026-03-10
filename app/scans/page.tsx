@@ -6,7 +6,7 @@ import {
   Terminal, Clock, XCircle, Bot, Globe, Smartphone, Copy, Check,
   ChevronDown, ChevronUp, ShieldCheck, AlertTriangle, FileCode,
   Zap, Code, Shield, Search, ScanLine, CheckCircle2, Loader2,
-  ExternalLink, X,
+  ExternalLink, X, Download,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Checkbox } from "@/components/ui/checkbox"
 import { agents, type AssetType } from "@/lib/mock-data"
 import type { ScanResult, Finding, Severity } from "@/lib/types"
 import { agentTextColor, agentBgColor } from "@/lib/agent-colors"
@@ -113,7 +114,60 @@ export default function ScansPage() {
   const [expandedResults, setExpandedResults] = useState<Record<string, boolean>>({})
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [isScanning, setIsScanning] = useState(false)
+  const [selectedFixes, setSelectedFixes] = useState<Set<string>>(new Set())
 const scanIdRef = useRef(0)
+
+  /* ── Toggle fix selection ─────────────────────────────────────── */
+  const toggleFixSelection = (findingId: string) => {
+    setSelectedFixes(prev => {
+      const next = new Set(prev)
+      if (next.has(findingId)) {
+        next.delete(findingId)
+      } else {
+        next.add(findingId)
+      }
+      return next
+    })
+  }
+
+  /* ── Export selected fixes as JSON ────────────────────────────── */
+  const exportSelectedFixes = () => {
+    const allFindings = completedScans.flatMap(scan => 
+      (scan.findings || []).map(f => ({ ...f, scanTarget: scan.target }))
+    )
+    
+    const selectedFindings = allFindings.filter(f => selectedFixes.has(f.id))
+    
+    if (selectedFindings.length === 0) {
+      toast.error("No fixes selected", { description: "Select at least one fix to export" })
+      return
+    }
+
+    const exportData = {
+      prompt_type: "security_fix_application",
+      timestamp: new Date().toISOString(),
+      selected_fixes: selectedFindings.map(finding => ({
+        fix_id: finding.id,
+        description: `${finding.title}: ${finding.description}`,
+        file_path: finding.location || finding.scanTarget,
+        severity: finding.severity,
+        cvss: finding.cvss,
+        owasp: finding.owasp,
+        remediation: finding.remediation?.code || finding.remediation?.description || "Manual review required"
+      }))
+    }
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `lockup-fixes-${Date.now()}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    
+    toast.success("Fixes exported", { description: `${selectedFindings.length} fixes exported to JSON` })
+    setSelectedFixes(new Set())
+  }
   
   /* ── Start a real scan ────────────────────────────────────── */
   const startRealScan = useCallback(async (target: string, type: ScanType) => {
@@ -529,6 +583,22 @@ const scanIdRef = useRef(0)
             </Card>
           ) : (
             <div className="flex flex-col gap-4">
+              {/* Export Selected Fixes Button */}
+              {selectedFixes.size > 0 && (
+                <div className="flex items-center justify-between p-3 rounded-lg border border-primary/30 bg-primary/5">
+                  <span className="text-sm text-foreground">
+                    <strong>{selectedFixes.size}</strong> fix{selectedFixes.size > 1 ? "es" : ""} selected
+                  </span>
+                  <Button
+                    size="sm"
+                    onClick={exportSelectedFixes}
+                    className="gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Export as JSON
+                  </Button>
+                </div>
+              )}
             {completedScans.map((result, i) => (
               <motion.div
                 key={`${result.id}-${i}`}
@@ -615,6 +685,12 @@ const scanIdRef = useRef(0)
                                     <div key={finding.id} className="p-3 rounded-lg border border-border bg-secondary/30">
                                       <div className="flex items-start justify-between gap-2 mb-2">
                                         <div className="flex items-center gap-2">
+                                          <Checkbox
+                                            id={`fix-${finding.id}`}
+                                            checked={selectedFixes.has(finding.id)}
+                                            onCheckedChange={() => toggleFixSelection(finding.id)}
+                                            className="h-4 w-4"
+                                          />
                                           <AlertTriangle className={`h-4 w-4 shrink-0 ${
                                             finding.severity === "critical" ? "text-destructive" :
                                             finding.severity === "high" ? "text-warning" :
