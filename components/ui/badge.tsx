@@ -17,6 +17,15 @@ const badgeVariants = cva(
           'border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60',
         outline:
           'text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground',
+        // LockUp brand-inspired variants with solid colors
+        blue: 'border-transparent bg-sky-300 text-slate-900 shadow-sm',
+        green: 'border-transparent bg-green-600 text-white shadow-sm',
+        brown: 'border-transparent bg-amber-700 text-white shadow-sm',
+        // Severity variants with brand styling
+        critical: 'border-transparent bg-red-600 text-white uppercase tracking-wide font-semibold',
+        high: 'border-transparent bg-amber-500 text-slate-900 uppercase tracking-wide font-semibold',
+        medium: 'border-transparent bg-sky-400 text-slate-900 uppercase tracking-wide font-semibold',
+        low: 'border-transparent bg-green-600 text-white uppercase tracking-wide font-semibold',
       },
     },
     defaultVariants: {

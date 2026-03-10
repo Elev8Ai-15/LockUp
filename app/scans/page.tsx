@@ -6,7 +6,7 @@ import {
   Terminal, Clock, XCircle, Bot, Globe, Smartphone, Copy, Check,
   ChevronDown, ChevronUp, ShieldCheck, AlertTriangle, FileCode,
   Zap, Code, Shield, Search, ScanLine, CheckCircle2, Loader2,
-  ExternalLink, X,
+  ExternalLink, X, Download,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Checkbox } from "@/components/ui/checkbox"
 import { agents, type AssetType } from "@/lib/mock-data"
 import type { ScanResult, Finding, Severity } from "@/lib/types"
 import { agentTextColor, agentBgColor } from "@/lib/agent-colors"
@@ -113,7 +114,60 @@ export default function ScansPage() {
   const [expandedResults, setExpandedResults] = useState<Record<string, boolean>>({})
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [isScanning, setIsScanning] = useState(false)
+  const [selectedFixes, setSelectedFixes] = useState<Set<string>>(new Set())
 const scanIdRef = useRef(0)
+
+  /* ── Toggle fix selection ─────────────────────────────────────── */
+  const toggleFixSelection = (findingId: string) => {
+    setSelectedFixes(prev => {
+      const next = new Set(prev)
+      if (next.has(findingId)) {
+        next.delete(findingId)
+      } else {
+        next.add(findingId)
+      }
+      return next
+    })
+  }
+
+  /* ── Export selected fixes as JSON ────────────────────────────── */
+  const exportSelectedFixes = () => {
+    const allFindings = completedScans.flatMap(scan => 
+      (scan.findings || []).map(f => ({ ...f, scanTarget: scan.target }))
+    )
+    
+    const selectedFindings = allFindings.filter(f => selectedFixes.has(f.id))
+    
+    if (selectedFindings.length === 0) {
+      toast.error("No fixes selected", { description: "Select at least one fix to export" })
+      return
+    }
+
+    const exportData = {
+      prompt_type: "security_fix_application",
+      timestamp: new Date().toISOString(),
+      selected_fixes: selectedFindings.map(finding => ({
+        fix_id: finding.id,
+        description: `${finding.title}: ${finding.description}`,
+        file_path: finding.location || finding.scanTarget,
+        severity: finding.severity,
+        cvss: finding.cvss,
+        owasp: finding.owasp,
+        remediation: finding.remediation?.code || finding.remediation?.description || "Manual review required"
+      }))
+    }
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `lockup-fixes-${Date.now()}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    
+    toast.success("Fixes exported", { description: `${selectedFindings.length} fixes exported to JSON` })
+    setSelectedFixes(new Set())
+  }
   
   /* ── Start a real scan ────────────────────────────────────── */
   const startRealScan = useCallback(async (target: string, type: ScanType) => {
@@ -278,7 +332,7 @@ const scanIdRef = useRef(0)
   return (
     <div className="flex flex-col gap-6">
       {/* ── HERO: Quick Scan ─────────────────────────────────── */}
-      <Card className="bg-card border-primary/20 overflow-hidden">
+      <Card variant="accent" className="overflow-hidden">
         <CardContent className="p-5">
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
@@ -320,7 +374,13 @@ const scanIdRef = useRef(0)
                 />
               </div>
               <Button
-                className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold h-10 px-5 shrink-0"
+                className="gap-2 font-semibold h-10 px-5 shrink-0 transition-all hover:-translate-y-0.5 active:translate-y-0"
+                style={{
+                  background: 'linear-gradient(180deg, #89CFF0 0%, #5AB4E0 100%)',
+                  color: '#0F1A14',
+                  boxShadow: '0 1px 0 rgba(255,255,255,0.3) inset, 0 2px 4px rgba(0,0,0,0.1), 0 4px 8px rgba(137,207,240,0.25)',
+                  border: 'none',
+                }}
                 onClick={() => startQuickScan()}
                 disabled={isScanning}
               >
@@ -448,7 +508,7 @@ const scanIdRef = useRef(0)
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ delay: i * 0.05 }}
                 >
-                  <Card className="bg-card border-border overflow-hidden">
+                  <Card variant="lockup" className="overflow-hidden">
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -462,11 +522,10 @@ const scanIdRef = useRef(0)
                             <p className="text-[10px] text-muted-foreground capitalize">{scan.type} scan</p>
                           </div>
                         </div>
-                        <Badge variant="outline" className={`text-[10px] ${
-                          scan.status === "completed" ? "border-success/30 text-success" :
-                          scan.status === "failed" ? "border-destructive/30 text-destructive" :
-                          "border-primary/30 text-primary"
-                        }`}>
+                        <Badge 
+                          variant={scan.status === "completed" ? "green" : scan.status === "failed" ? "critical" : "blue"} 
+                          className="text-[10px]"
+                        >
                           {scan.status === "initializing" && "Initializing..."}
                           {scan.status === "scanning" && "Scanning..."}
                           {scan.status === "analyzing" && "Analyzing..."}
@@ -529,6 +588,22 @@ const scanIdRef = useRef(0)
             </Card>
           ) : (
             <div className="flex flex-col gap-4">
+              {/* Export Selected Fixes Button */}
+              {selectedFixes.size > 0 && (
+                <div className="flex items-center justify-between p-3 rounded-lg border border-primary/30 bg-primary/5">
+                  <span className="text-sm text-foreground">
+                    <strong>{selectedFixes.size}</strong> fix{selectedFixes.size > 1 ? "es" : ""} selected
+                  </span>
+                  <Button
+                    size="sm"
+                    onClick={exportSelectedFixes}
+                    className="gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Export as JSON
+                  </Button>
+                </div>
+              )}
             {completedScans.map((result, i) => (
               <motion.div
                 key={`${result.id}-${i}`}
@@ -536,7 +611,7 @@ const scanIdRef = useRef(0)
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
               >
-                  <Card className="bg-card border-border overflow-hidden">
+                  <Card variant="lockup" className="overflow-hidden">
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -553,19 +628,29 @@ const scanIdRef = useRef(0)
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
+                          {/* Tech Stack Badge */}
+                          {result.metadata?.detectedStack && (() => {
+                            const stack = result.metadata.detectedStack as { framework?: string; cms?: string; cdn?: string; server?: string }
+                            const stackText = [stack.framework, stack.cms, stack.cdn || stack.server].filter(Boolean).join(" + ") || "Static HTML"
+                            return (
+                              <Badge variant="blue" className="text-[10px]">
+                                {stackText}
+                              </Badge>
+                            )
+                          })()}
                           {/* Summary badges */}
                           {result.summary?.critical > 0 && (
-                            <Badge variant="outline" className="text-[10px] border-destructive/30 text-destructive">
+                            <Badge variant="critical" className="text-[10px]">
                               {result.summary.critical} Critical
                             </Badge>
                           )}
                           {result.summary?.high > 0 && (
-                            <Badge variant="outline" className="text-[10px] border-warning/30 text-warning">
+                            <Badge variant="high" className="text-[10px]">
                               {result.summary.high} High
                             </Badge>
                           )}
                           {result.summary?.total === 0 && (
-                            <Badge variant="outline" className="text-[10px] border-success/30 text-success">
+                            <Badge variant="green" className="text-[10px]">
                               No Issues
                             </Badge>
                           )}
@@ -605,6 +690,12 @@ const scanIdRef = useRef(0)
                                     <div key={finding.id} className="p-3 rounded-lg border border-border bg-secondary/30">
                                       <div className="flex items-start justify-between gap-2 mb-2">
                                         <div className="flex items-center gap-2">
+                                          <Checkbox
+                                            id={`fix-${finding.id}`}
+                                            checked={selectedFixes.has(finding.id)}
+                                            onCheckedChange={() => toggleFixSelection(finding.id)}
+                                            className="h-4 w-4"
+                                          />
                                           <AlertTriangle className={`h-4 w-4 shrink-0 ${
                                             finding.severity === "critical" ? "text-destructive" :
                                             finding.severity === "high" ? "text-warning" :
@@ -613,7 +704,10 @@ const scanIdRef = useRef(0)
                                           <span className="text-sm font-medium text-foreground">{finding.title}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                          <Badge variant="outline" className={`text-[10px] uppercase ${severityBadge[finding.severity]}`}>
+                                          <Badge 
+                                            variant={finding.severity as "critical" | "high" | "medium" | "low"} 
+                                            className="text-[10px]"
+                                          >
                                             {finding.severity}
                                           </Badge>
                                           <Badge variant="outline" className="text-[10px] border-border text-muted-foreground">

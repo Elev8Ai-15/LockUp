@@ -433,12 +433,12 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* ── SCAN INPUT ──────────────────────────────────────── */}
-      <Card className="bg-card border-primary/20 overflow-hidden">
+      <Card className="bg-card border-2 border-sky-400/30 shadow-md ring-1 ring-sky-400/10 overflow-hidden">
         <CardContent className="p-5">
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                <Zap className="h-5 w-5 text-primary" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-400/10">
+                <Zap className="h-5 w-5 text-sky-400" />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-foreground tracking-tight">Scan & Fix</h1>
@@ -457,27 +457,33 @@ export default function DashboardPage() {
                   onKeyDown={(e) => { if (e.key === "Enter") startScan("Full Spectrum") }}
                 />
               </div>
-              <Button
-                className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold h-11 px-6 shrink-0"
-                onClick={() => startScan("Full Spectrum")}
-              >
-                <Zap className="h-4 w-4" />
-                Scan Now
-              </Button>
+  <Button
+  className="gap-2 font-semibold h-11 px-6 shrink-0 transition-all hover:-translate-y-0.5 active:translate-y-0"
+  style={{
+    background: 'linear-gradient(180deg, #89CFF0 0%, #5AB4E0 100%)',
+    color: '#0F1A14',
+    boxShadow: '0 1px 0 rgba(255,255,255,0.3) inset, 0 2px 4px rgba(0,0,0,0.1), 0 4px 8px rgba(137,207,240,0.25)',
+    border: 'none',
+  }}
+  onClick={() => startScan("Full Spectrum")}
+  >
+  <Zap className="h-4 w-4" />
+  Scan Now
+  </Button>
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" className="gap-1.5 border-border text-foreground hover:bg-secondary text-xs h-8" onClick={() => startScan("Website DAST")}>
-                <Globe className="h-3.5 w-3.5 text-success" /> Website
+              <Button variant="outline" size="sm" className="gap-1.5 border-green-600/30 text-foreground hover:bg-green-600/10 hover:border-green-600/50 text-xs h-8" onClick={() => startScan("Website DAST")}>
+                <Globe className="h-3.5 w-3.5 text-green-600" /> Website
               </Button>
-              <Button variant="outline" size="sm" className="gap-1.5 border-border text-foreground hover:bg-secondary text-xs h-8" onClick={() => startScan("Web App")}>
-                <Smartphone className="h-3.5 w-3.5 text-primary" /> Web App
+              <Button variant="outline" size="sm" className="gap-1.5 border-sky-400/30 text-foreground hover:bg-sky-400/10 hover:border-sky-400/50 text-xs h-8" onClick={() => startScan("Web App")}>
+                <Smartphone className="h-3.5 w-3.5 text-sky-400" /> Web App
               </Button>
-              <Button variant="outline" size="sm" className="gap-1.5 border-border text-foreground hover:bg-secondary text-xs h-8" onClick={() => startScan("Code Repo")}>
-                <Code className="h-3.5 w-3.5 text-primary" /> Repo
+              <Button variant="outline" size="sm" className="gap-1.5 border-sky-400/30 text-foreground hover:bg-sky-400/10 hover:border-sky-400/50 text-xs h-8" onClick={() => startScan("Code Repo")}>
+                <Code className="h-3.5 w-3.5 text-sky-400" /> Repo
               </Button>
-              <Button variant="outline" size="sm" className="gap-1.5 border-border text-foreground hover:bg-secondary text-xs h-8" onClick={() => startScan("Smart Contract")}>
-                <Shield className="h-3.5 w-3.5 text-accent" /> Smart Contract
+              <Button variant="outline" size="sm" className="gap-1.5 border-amber-600/30 text-foreground hover:bg-amber-600/10 hover:border-amber-600/50 text-xs h-8" onClick={() => startScan("Smart Contract")}>
+                <Shield className="h-3.5 w-3.5 text-amber-600" /> Smart Contract
               </Button>
             </div>
           </div>

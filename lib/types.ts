@@ -18,6 +18,14 @@ export type OWASPCategory =
 
 export type ScanType = "website" | "repo" | "contract" | "api"
 
+export interface DetectedStack {
+  framework: string | null
+  server: string | null
+  language: string | null
+  cms: string | null
+  cdn: string | null
+}
+
 export type AssetType = "Website" | "Repo" | "WebApp" | "SmartContract" | "API"
 
 export type VulnType = "SAST" | "DAST" | "SCA" | "Web" | "App" | "Blockchain" | "API" | "Config" | "Shadow AI"
