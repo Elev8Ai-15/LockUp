@@ -629,15 +629,15 @@ const scanIdRef = useRef(0)
                         </div>
                         <div className="flex items-center gap-2">
                           {/* Tech Stack Badge */}
-                          {result.metadata?.detectedStack && (
-                            <Badge variant="blue" className="text-[10px]">
-                              {String([
-                                result.metadata.detectedStack.framework,
-                                result.metadata.detectedStack.cms,
-                                result.metadata.detectedStack.cdn || result.metadata.detectedStack.server
-                              ].filter(Boolean).join(" + ") || "Static HTML")}
-                            </Badge>
-                          )}
+                          {result.metadata?.detectedStack && (() => {
+                            const stack = result.metadata.detectedStack as { framework?: string; cms?: string; cdn?: string; server?: string }
+                            const stackText = [stack.framework, stack.cms, stack.cdn || stack.server].filter(Boolean).join(" + ") || "Static HTML"
+                            return (
+                              <Badge variant="blue" className="text-[10px]">
+                                {stackText}
+                              </Badge>
+                            )
+                          })()}
                           {/* Summary badges */}
                           {result.summary?.critical > 0 && (
                             <Badge variant="critical" className="text-[10px]">
