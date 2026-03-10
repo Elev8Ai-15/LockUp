@@ -332,7 +332,7 @@ const scanIdRef = useRef(0)
   return (
     <div className="flex flex-col gap-6">
       {/* ── HERO: Quick Scan ─────────────────────────────────── */}
-      <Card className="bg-card border-primary/20 overflow-hidden">
+      <Card variant="accent" className="overflow-hidden">
         <CardContent className="p-5">
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
@@ -374,7 +374,7 @@ const scanIdRef = useRef(0)
                 />
               </div>
               <Button
-                className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold h-10 px-5 shrink-0"
+                className="lockup-button gap-2 font-semibold h-10 px-5 shrink-0"
                 onClick={() => startQuickScan()}
                 disabled={isScanning}
               >
@@ -502,7 +502,7 @@ const scanIdRef = useRef(0)
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ delay: i * 0.05 }}
                 >
-                  <Card className="bg-card border-border overflow-hidden">
+                  <Card variant="lockup" className="overflow-hidden">
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -516,11 +516,10 @@ const scanIdRef = useRef(0)
                             <p className="text-[10px] text-muted-foreground capitalize">{scan.type} scan</p>
                           </div>
                         </div>
-                        <Badge variant="outline" className={`text-[10px] ${
-                          scan.status === "completed" ? "border-success/30 text-success" :
-                          scan.status === "failed" ? "border-destructive/30 text-destructive" :
-                          "border-primary/30 text-primary"
-                        }`}>
+                        <Badge 
+                          variant={scan.status === "completed" ? "green" : scan.status === "failed" ? "critical" : "blue"} 
+                          className="text-[10px]"
+                        >
                           {scan.status === "initializing" && "Initializing..."}
                           {scan.status === "scanning" && "Scanning..."}
                           {scan.status === "analyzing" && "Analyzing..."}
@@ -606,7 +605,7 @@ const scanIdRef = useRef(0)
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
               >
-                  <Card className="bg-card border-border overflow-hidden">
+                  <Card variant="lockup" className="overflow-hidden">
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -625,7 +624,7 @@ const scanIdRef = useRef(0)
                         <div className="flex items-center gap-2">
                           {/* Tech Stack Badge */}
                           {result.metadata?.detectedStack && (
-                            <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-primary/20">
+                            <Badge variant="blue" className="text-[10px]">
                               {[
                                 result.metadata.detectedStack.framework,
                                 result.metadata.detectedStack.cms,
@@ -635,17 +634,17 @@ const scanIdRef = useRef(0)
                           )}
                           {/* Summary badges */}
                           {result.summary?.critical > 0 && (
-                            <Badge variant="outline" className="text-[10px] border-destructive/30 text-destructive">
+                            <Badge variant="critical" className="text-[10px]">
                               {result.summary.critical} Critical
                             </Badge>
                           )}
                           {result.summary?.high > 0 && (
-                            <Badge variant="outline" className="text-[10px] border-warning/30 text-warning">
+                            <Badge variant="high" className="text-[10px]">
                               {result.summary.high} High
                             </Badge>
                           )}
                           {result.summary?.total === 0 && (
-                            <Badge variant="outline" className="text-[10px] border-success/30 text-success">
+                            <Badge variant="green" className="text-[10px]">
                               No Issues
                             </Badge>
                           )}
@@ -699,7 +698,10 @@ const scanIdRef = useRef(0)
                                           <span className="text-sm font-medium text-foreground">{finding.title}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                          <Badge variant="outline" className={`text-[10px] uppercase ${severityBadge[finding.severity]}`}>
+                                          <Badge 
+                                            variant={finding.severity as "critical" | "high" | "medium" | "low"} 
+                                            className="text-[10px]"
+                                          >
                                             {finding.severity}
                                           </Badge>
                                           <Badge variant="outline" className="text-[10px] border-border text-muted-foreground">
