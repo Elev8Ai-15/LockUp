@@ -279,24 +279,26 @@
    baby blue (#89CFF0), forest green (#228B22), warm brown (#A67B5B)
    ═══════════════════════════════════════════════════════════════════════════ */
 
+@layer components {
+
 /* Lock-inspired card: slightly tapered feel with soft rounded corners */
 .lockup-card {
-  position: relative;
-  border-radius: 0.75rem;
-  background: linear-gradient(180deg, var(--card) 0%, color-mix(in srgb, var(--card) 97%, var(--primary) 3%) 100%);
-  border: 1px solid var(--border);
+  position: relative !important;
+  border-radius: 0.75rem !important;
+  background: linear-gradient(180deg, var(--card) 0%, color-mix(in srgb, var(--card) 97%, var(--primary) 3%) 100%) !important;
+  border: 1px solid var(--border) !important;
   box-shadow: 
     0 1px 2px rgba(0, 0, 0, 0.04),
     0 4px 12px rgba(0, 0, 0, 0.03),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+    inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+  transition: box-shadow 0.2s ease, transform 0.2s ease !important;
 }
 
 .lockup-card:hover {
   box-shadow: 
     0 2px 4px rgba(0, 0, 0, 0.06),
     0 8px 24px rgba(137, 207, 240, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
 }
 
 /* Keyhole-inspired focal indicator */
@@ -343,88 +345,88 @@
 
 /* Badge variants inspired by logo colors */
 .lockup-badge-blue {
-  background: linear-gradient(135deg, #89CFF0 0%, #5AB4E0 100%);
-  color: #0F1A14;
-  border: none;
-  box-shadow: 0 1px 3px rgba(137, 207, 240, 0.3);
+  background: linear-gradient(135deg, #89CFF0 0%, #5AB4E0 100%) !important;
+  color: #0F1A14 !important;
+  border: none !important;
+  box-shadow: 0 1px 3px rgba(137, 207, 240, 0.3) !important;
 }
 
 .lockup-badge-green {
-  background: linear-gradient(135deg, #228B22 0%, #1A6B1A 100%);
-  color: white;
-  border: none;
-  box-shadow: 0 1px 3px rgba(34, 139, 34, 0.3);
+  background: linear-gradient(135deg, #228B22 0%, #1A6B1A 100%) !important;
+  color: white !important;
+  border: none !important;
+  box-shadow: 0 1px 3px rgba(34, 139, 34, 0.3) !important;
 }
 
 .lockup-badge-brown {
-  background: linear-gradient(135deg, #A67B5B 0%, #8C6648 100%);
-  color: white;
-  border: none;
-  box-shadow: 0 1px 3px rgba(166, 123, 91, 0.3);
+  background: linear-gradient(135deg, #A67B5B 0%, #8C6648 100%) !important;
+  color: white !important;
+  border: none !important;
+  box-shadow: 0 1px 3px rgba(166, 123, 91, 0.3) !important;
 }
 
 /* Severity badges with lock-inspired styling */
 .lockup-severity-critical {
-  background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
-  color: white;
-  border-radius: 0.375rem;
-  padding: 0.25rem 0.5rem;
-  font-weight: 600;
-  font-size: 0.625rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%) !important;
+  color: white !important;
+  border-radius: 0.375rem !important;
+  padding: 0.25rem 0.5rem !important;
+  font-weight: 600 !important;
+  font-size: 0.625rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
 }
 
 .lockup-severity-high {
-  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
-  color: #0F1A14;
-  border-radius: 0.375rem;
-  padding: 0.25rem 0.5rem;
-  font-weight: 600;
-  font-size: 0.625rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%) !important;
+  color: #0F1A14 !important;
+  border-radius: 0.375rem !important;
+  padding: 0.25rem 0.5rem !important;
+  font-weight: 600 !important;
+  font-size: 0.625rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
 }
 
 .lockup-severity-medium {
-  background: linear-gradient(135deg, #89CFF0 0%, #5AB4E0 100%);
-  color: #0F1A14;
-  border-radius: 0.375rem;
-  padding: 0.25rem 0.5rem;
-  font-weight: 600;
-  font-size: 0.625rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  background: linear-gradient(135deg, #89CFF0 0%, #5AB4E0 100%) !important;
+  color: #0F1A14 !important;
+  border-radius: 0.375rem !important;
+  padding: 0.25rem 0.5rem !important;
+  font-weight: 600 !important;
+  font-size: 0.625rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
 }
 
 .lockup-severity-low {
-  background: linear-gradient(135deg, #228B22 0%, #1A6B1A 100%);
-  color: white;
-  border-radius: 0.375rem;
-  padding: 0.25rem 0.5rem;
-  font-weight: 600;
-  font-size: 0.625rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  background: linear-gradient(135deg, #228B22 0%, #1A6B1A 100%) !important;
+  color: white !important;
+  border-radius: 0.375rem !important;
+  padding: 0.25rem 0.5rem !important;
+  font-weight: 600 !important;
+  font-size: 0.625rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
 }
 
 /* Frame/outline with subtle depth - inspired by logo's 3D treatment */
 .lockup-frame {
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
+  border: 1px solid var(--border) !important;
+  border-radius: 0.75rem !important;
   box-shadow: 
     inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 1px 2px rgba(0, 0, 0, 0.05);
-  background: var(--card);
+    0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  background: var(--card) !important;
 }
 
 .lockup-frame-accent {
-  border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--border) 70%);
-  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--border) 70%) !important;
+  border-radius: 0.75rem !important;
   box-shadow: 
     inset 0 1px 0 rgba(137, 207, 240, 0.1),
     0 0 0 1px rgba(137, 207, 240, 0.05),
-    0 2px 8px rgba(137, 207, 240, 0.08);
+    0 2px 8px rgba(137, 207, 240, 0.08) !important;
 }
 
 /* Secure/locked state indicator */
@@ -446,33 +448,33 @@
 
 /* Interactive button with logo-inspired depth */
 .lockup-button {
-  position: relative;
-  background: linear-gradient(180deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 85%, #000 15%) 100%);
-  color: var(--primary-foreground);
-  border: none;
-  border-radius: 0.5rem;
-  padding: 0.5rem 1rem;
-  font-weight: 500;
-  box-shadow: 
+  position: relative !important;
+  background: linear-gradient(180deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 85%, #000 15%) 100%) !important;
+  color: var(--primary-foreground) !important;
+  border: none !important;
+  border-radius: 0.5rem !important;
+  padding: 0.5rem 1rem !important;
+  font-weight: 500 !important;
+  box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.15) inset,
     0 2px 4px rgba(0, 0, 0, 0.1),
-    0 4px 8px rgba(137, 207, 240, 0.15);
-  transition: all 0.15s ease;
+    0 4px 8px rgba(137, 207, 240, 0.15) !important;
+  transition: all 0.15s ease !important;
 }
 
 .lockup-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 
+  transform: translateY(-1px) !important;
+  box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.2) inset,
     0 4px 8px rgba(0, 0, 0, 0.12),
-    0 8px 16px rgba(137, 207, 240, 0.2);
+    0 8px 16px rgba(137, 207, 240, 0.2) !important;
 }
 
 .lockup-button:active {
-  transform: translateY(0);
-  box-shadow: 
+  transform: translateY(0) !important;
+  box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.1) inset,
-    0 1px 2px rgba(0, 0, 0, 0.15);
+    0 1px 2px rgba(0, 0, 0, 0.15) !important;
 }
 
 /* Divider with keyhole accent */
@@ -524,3 +526,5 @@
   color: #89CFF0;
   animation: pulse-glow 1.5s ease-in-out infinite;
 }
+
+} /* End @layer components */
