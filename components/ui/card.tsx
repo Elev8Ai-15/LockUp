@@ -9,10 +9,10 @@ const cardVariants = cva(
     variants: {
       variant: {
         default: 'bg-card rounded-xl border shadow-sm',
-        lockup: 'bg-card rounded-xl border border-border shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.03),inset_0_1px_0_rgba(255,255,255,0.06)] hover:shadow-[0_2px_4px_rgba(0,0,0,0.06),0_8px_24px_rgba(137,207,240,0.08)] transition-shadow',
-        frame: 'bg-card rounded-xl border border-border shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_1px_2px_rgba(0,0,0,0.05)]',
-        accent: 'bg-card rounded-xl border-2 border-primary/30 shadow-[inset_0_1px_0_rgba(137,207,240,0.1),0_0_0_1px_rgba(137,207,240,0.05),0_2px_8px_rgba(137,207,240,0.08)]',
-        secure: 'bg-card rounded-xl border border-border shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.03)] before:absolute before:top-0 before:left-0 before:right-0 before:h-[3px] before:bg-gradient-to-r before:from-[#228B22] before:via-[#89CFF0] before:to-[#228B22] relative overflow-hidden',
+        lockup: 'bg-card rounded-xl border border-border shadow-md hover:shadow-lg transition-shadow',
+        frame: 'bg-card rounded-xl border border-border shadow-sm',
+        accent: 'bg-card rounded-xl border-2 border-sky-400/30 shadow-md ring-1 ring-sky-400/10',
+        secure: 'bg-card rounded-xl border border-border shadow-md relative overflow-hidden',
       },
     },
     defaultVariants: {

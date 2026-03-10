@@ -374,7 +374,13 @@ const scanIdRef = useRef(0)
                 />
               </div>
               <Button
-                className="gap-2 font-semibold h-10 px-5 shrink-0 bg-[linear-gradient(180deg,var(--primary)_0%,color-mix(in_srgb,var(--primary)_85%,#000_15%)_100%)] shadow-[0_1px_0_rgba(255,255,255,0.15)_inset,0_2px_4px_rgba(0,0,0,0.1),0_4px_8px_rgba(137,207,240,0.15)] hover:translate-y-[-1px] hover:shadow-[0_1px_0_rgba(255,255,255,0.2)_inset,0_4px_8px_rgba(0,0,0,0.12),0_8px_16px_rgba(137,207,240,0.2)] active:translate-y-0 transition-all"
+                className="gap-2 font-semibold h-10 px-5 shrink-0 transition-all hover:-translate-y-0.5 active:translate-y-0"
+                style={{
+                  background: 'linear-gradient(180deg, #89CFF0 0%, #5AB4E0 100%)',
+                  color: '#0F1A14',
+                  boxShadow: '0 1px 0 rgba(255,255,255,0.3) inset, 0 2px 4px rgba(0,0,0,0.1), 0 4px 8px rgba(137,207,240,0.25)',
+                  border: 'none',
+                }}
                 onClick={() => startQuickScan()}
                 disabled={isScanning}
               >
